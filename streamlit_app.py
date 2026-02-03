@@ -7,7 +7,6 @@ from collections import deque
 # =========================================================
 
 COURT_LIMITS = {2: 16, 3: 26, 4: 36, 5: 46, 6: 56, 7: 66}
-
 SKILLS = ["BEGINNER", "NOVICE", "INTERMEDIATE"]
 
 # =========================================================
@@ -45,7 +44,11 @@ st.markdown("""
 # =========================================================
 
 def skill_icon(cat):
-    return {"BEGINNER":"🟢","NOVICE":"🟡","INTERMEDIATE":"🔴"}[cat]
+    return {
+        "BEGINNER": "🟢",
+        "NOVICE": "🟡",
+        "INTERMEDIATE": "🔴"
+    }[cat]
 
 def format_player(p):
     return f"{skill_icon(p[1])} {p[0]}"
@@ -55,12 +58,14 @@ def make_teams(players):
     return [players[:2], players[2:]]
 
 def is_safe_combo(players):
-    """Beginner and Intermediate cannot mix"""
+    """Beginner and Intermediate cannot be in same match"""
     skills = {p[1] for p in players}
-    return not ("BEGINNER" in skills and "INTERMEDIATE" in skills)
+    if "BEGINNER" in skills and "INTERMEDIATE" in skills:
+        return False
+    return True
 
 def pick_four_fifo_safe(queue):
-    """Pick first 4 players FIFO, rotate minimally to meet safe combo rule"""
+    """Pick first 4 players in FIFO order with safe skill combination"""
     if len(queue) < 4:
         return None
     temp = list(queue)
@@ -88,19 +93,18 @@ def finish_match(court_id, winner_idx):
     start_match(court_id)
 
 def auto_fill_empty_courts():
-    """Auto start matches in empty courts"""
     if not st.session_state.started:
-        return
+        return False
+    changed = False
     for c in st.session_state.courts:
         if st.session_state.courts[c] is None:
-            start_match(c)
+            if start_match(c):
+                changed = True
+    return changed
 
 # =========================================================
 # SESSION STATE
 # =========================================================
-
-if "page" not in st.session_state:
-    st.session_state.page = "home"
 
 if "queue" not in st.session_state:
     st.session_state.queue = deque()
@@ -114,60 +118,62 @@ if "started" not in st.session_state:
 if "court_count" not in st.session_state:
     st.session_state.court_count = 2
 
+if "page" not in st.session_state:
+    st.session_state.page = "home"
+
 # =========================================================
 # HOMEPAGE
 # =========================================================
 
 if st.session_state.page == "home":
     st.title("🎾 TiraDinks Pickleball")
-    st.subheader("Choose your role")
+    st.subheader("Select mode")
+    c1, c2 = st.columns(2)
 
-    col1, col2 = st.columns(2)
-
-    if col1.button("Organizer"):
+    if c1.button("Organizer"):
         st.session_state.page = "organizer"
+        st.experimental_rerun()
 
-    if col2.button("Player"):
+    if c2.button("Player"):
         st.session_state.page = "player"
-
-    st.stop()
+        st.experimental_rerun()
 
 # =========================================================
 # PLAYER PAGE
 # =========================================================
 
-if st.session_state.page == "player":
-    st.title("🎾 Player")
+elif st.session_state.page == "player":
+    st.title("🎾 Player Page")
     st.warning("UNDER CONSTRUCTION")
     if st.button("Back"):
         st.session_state.page = "home"
-        st.stop()
+        st.experimental_rerun()
 
 # =========================================================
-# ORGANIZER PAGE (Pickleball Auto Stack)
+# ORGANIZER PAGE
 # =========================================================
 
-if st.session_state.page == "organizer":
+elif st.session_state.page == "organizer":
 
     st.title("🎾 TiraDinks Pickleball Auto Stack")
-    st.caption("First come, first play • Fair skill matching • Tap winners to continue")
+    st.caption("First come first play • fair skill matching • tap winners to continue")
 
-    # -----------------------------------------------------
     # SIDEBAR
-    # -----------------------------------------------------
     with st.sidebar:
-        st.header("⚙ Setup")
 
+        st.header("⚙ Setup")
         st.session_state.court_count = st.selectbox(
-            "Number of courts", [2,3,4], index=0
+            "Number of courts",
+            [2, 3, 4],
+            index=0
         )
         st.write(f"Max players: **{COURT_LIMITS[st.session_state.court_count]}**")
-
         st.divider()
+
         st.subheader("➕ Add Player")
         with st.form("add_player_form", clear_on_submit=True):
             name = st.text_input("Name")
-            cat = st.radio("Skill", ["Beginner","Novice","Intermediate"])
+            cat = st.radio("Skill", ["Beginner", "Novice", "Intermediate"])
             submitted = st.form_submit_button("Add to Queue")
             if submitted and name.strip():
                 st.session_state.queue.append((name.strip(), cat.upper()))
@@ -175,8 +181,8 @@ if st.session_state.page == "organizer":
         st.divider()
         if st.button("🚀 Start Games"):
             st.session_state.started = True
-            st.session_state.courts = {i: None for i in range(1, st.session_state.court_count+1)}
-            auto_fill_empty_courts()
+            st.session_state.courts = {i: None for i in range(1, st.session_state.court_count + 1)}
+            st.experimental_rerun()
 
         if st.button("🔄 Reset All"):
             st.session_state.queue = deque()
@@ -184,14 +190,12 @@ if st.session_state.page == "organizer":
             st.session_state.started = False
             st.experimental_rerun()
 
-    # -----------------------------------------------------
     # AUTO FILL COURTS
-    # -----------------------------------------------------
-    auto_fill_empty_courts()
+    changed = auto_fill_empty_courts()
+    if changed:
+        st.experimental_rerun()
 
-    # -----------------------------------------------------
-    # WAITING LIST
-    # -----------------------------------------------------
+    # WAITING QUEUE
     st.subheader("⏳ Waiting Queue")
     waiting = [format_player(p) for p in st.session_state.queue]
     if waiting:
@@ -199,13 +203,12 @@ if st.session_state.page == "organizer":
     else:
         st.success("No players waiting 🎉")
 
+    # STOP IF NOT STARTED
     if not st.session_state.started:
         st.info("Add players then press **Start Games**")
         st.stop()
 
-    # -----------------------------------------------------
-    # COURTS
-    # -----------------------------------------------------
+    # COURTS DISPLAY
     st.divider()
     st.subheader("🏟 Live Courts")
     cols = st.columns(len(st.session_state.courts))
@@ -215,6 +218,7 @@ if st.session_state.page == "organizer":
             st.markdown('<div class="court-card">', unsafe_allow_html=True)
             st.markdown(f"### Court {court_id}")
             teams = st.session_state.courts[court_id]
+
             if teams:
                 teamA = " & ".join(format_player(p) for p in teams[0])
                 teamB = " & ".join(format_player(p) for p in teams[1])
@@ -222,13 +226,22 @@ if st.session_state.page == "organizer":
                 st.write(f"**Team B**  \n{teamB}")
 
                 c1, c2 = st.columns(2)
-                if c1.button("🏆 A Wins", key=f"a{court_id}"):
+                a_wins = c1.button("🏆 A Wins", key=f"a{court_id}")
+                b_wins = c2.button("🏆 B Wins", key=f"b{court_id}")
+
+                if a_wins:
                     finish_match(court_id, 0)
-                    st.experimental_rerun()
-                if c2.button("🏆 B Wins", key=f"b{court_id}"):
+                    st.session_state._rerun_needed = True
+                if b_wins:
                     finish_match(court_id, 1)
-                    st.experimental_rerun()
+                    st.session_state._rerun_needed = True
+
             else:
                 st.info("Waiting for players...")
 
             st.markdown('</div>', unsafe_allow_html=True)
+
+    # Single rerun after all button clicks
+    if st.session_state.get("_rerun_needed"):
+        st.session_state._rerun_needed = False
+        st.experimental_rerun()
