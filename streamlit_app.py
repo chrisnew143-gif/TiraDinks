@@ -119,12 +119,10 @@ if st.session_state.page == "home":
     st.caption("Choose your role")
 
     col1, col2 = st.columns(2)
-
     with col1:
         if st.button("Organizer", key="organizer_btn"):
             st.session_state.page = "organizer"
             st.experimental_rerun()
-
     with col2:
         if st.button("Player", key="player_btn"):
             st.session_state.page = "player"
@@ -176,13 +174,13 @@ if st.session_state.page == "organizer":
             submitted = st.form_submit_button("Add to Queue")
             if submitted and name.strip():
                 st.session_state.queue.append((name.strip(), cat.upper()))
+                st.experimental_rerun()  # only here, safe
 
         st.divider()
 
         if st.button("🚀 Start Games"):
             st.session_state.started = True
             st.session_state.courts = {i: None for i in range(1, st.session_state.court_count + 1)}
-            # Only rerun here after a button click
             st.experimental_rerun()
 
         if st.button("🔄 Reset All"):
