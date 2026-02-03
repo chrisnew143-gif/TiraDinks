@@ -28,17 +28,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =========================================================
-# SAFE RERUN FLAG
-# =========================================================
-
-if "needs_rerun" not in st.session_state:
-    st.session_state["needs_rerun"] = False
-
-if st.session_state.get("needs_rerun", False):
-    st.session_state["needs_rerun"] = False
-    st.experimental_rerun()
-
-# =========================================================
 # SESSION STATE
 # =========================================================
 
@@ -128,12 +117,12 @@ if st.session_state.page == "home":
     with col1:
         if st.button("Organizer"):
             st.session_state.page = "organizer"
-            st.session_state["needs_rerun"] = True
+            st.experimental_rerun()  # Safe: inside button handler
 
     with col2:
         if st.button("Player"):
             st.session_state.page = "player"
-            st.session_state["needs_rerun"] = True
+            st.experimental_rerun()  # Safe: inside button handler
 
     st.stop()
 
@@ -146,11 +135,11 @@ if st.session_state.page == "player":
     st.info("UNDER CONSTRUCTION")
     if st.button("Back to Home"):
         st.session_state.page = "home"
-        st.session_state["needs_rerun"] = True
+        st.experimental_rerun()  # Safe: inside button handler
     st.stop()
 
 # =========================================================
-# ORGANIZER PAGE (Pickleball Auto Stack)
+# ORGANIZER PAGE
 # =========================================================
 
 st.title("🎾 TiraDinks Pickleball Auto Stack")
@@ -172,26 +161,25 @@ with st.sidebar:
         submitted = st.form_submit_button("Add to Queue")
         if submitted and name.strip():
             st.session_state.queue.append((name.strip(), cat.upper()))
-            st.session_state["needs_rerun"] = True
+            st.experimental_rerun()  # Safe: inside form submission
 
     st.divider()
     if st.button("🚀 Start Games"):
         st.session_state.started = True
         st.session_state.courts = {i: None for i in range(1, st.session_state.court_count + 1)}
-        st.session_state["needs_rerun"] = True
+        st.experimental_rerun()  # Safe: inside button handler
 
     if st.button("🔄 Reset All"):
         st.session_state.queue = deque()
         st.session_state.courts = {}
         st.session_state.started = False
-        st.session_state["needs_rerun"] = True
+        st.experimental_rerun()  # Safe: inside button handler
 
 # ----------------------------
 # AUTO FILL COURTS BEFORE DISPLAY
 # ----------------------------
-changed = auto_fill_empty_courts()
-if changed:
-    st.session_state["needs_rerun"] = True
+if auto_fill_empty_courts():
+    st.experimental_rerun()  # Safe: only after Streamlit initialized
 
 # ----------------------------
 # WAITING LIST
@@ -232,10 +220,10 @@ for idx, court_id in enumerate(st.session_state.courts):
             c1, c2 = st.columns(2)
             if c1.button("🏆 A Wins", key=f"a{court_id}"):
                 finish_match(court_id, 0)
-                st.session_state["needs_rerun"] = True
+                st.experimental_rerun()  # Safe: inside button handler
             if c2.button("🏆 B Wins", key=f"b{court_id}"):
                 finish_match(court_id, 1)
-                st.session_state["needs_rerun"] = True
+                st.experimental_rerun()  # Safe: inside button handler
         else:
             st.info("Waiting for players...")
 
