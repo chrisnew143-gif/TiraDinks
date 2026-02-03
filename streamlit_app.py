@@ -6,11 +6,7 @@ from collections import deque, defaultdict
 # CONFIG
 # =========================================================
 
-CATEGORY_MAP = {
-    "BEGINNER",
-    "NOVICE",
-    "INTERMEDIATE"
-}
+SKILLS = ["BEGINNER", "NOVICE", "INTERMEDIATE"]
 
 COURT_LIMITS = {2: 16, 3: 26, 4: 36}
 
@@ -87,7 +83,6 @@ def balanced_queue(players):
 
 
 def start_match(court_id):
-    """Fill a court if 4 players available"""
     if len(st.session_state.queue) >= 4:
         four = [st.session_state.queue.popleft() for _ in range(4)]
         st.session_state.courts[court_id] = make_teams(four)
@@ -102,12 +97,10 @@ def finish_match(court_id, winner_idx):
     losers = teams[1 - winner_idx]
 
     st.session_state.queue.extend(winners + losers)
-
     start_match(court_id)
 
 
 def auto_fill_empty_courts():
-    """🔥 AUTO START NEW MATCHES"""
     if not st.session_state.started:
         return
 
@@ -160,8 +153,9 @@ with st.sidebar:
 
     st.subheader("➕ Add Player")
 
-    # ✅ FIX: use form (no session_state modification error)
+    # CLEAN + SAFE FORM
     with st.form("add_player_form", clear_on_submit=True):
+
         name = st.text_input("Name")
 
         cat = st.radio(
@@ -171,9 +165,9 @@ with st.sidebar:
 
         submitted = st.form_submit_button("Add to Queue")
 
-        if submitted and name:
-            short = cat[0]
-            player = (name, CATEGORY_MAP[short])
+        if submitted and name.strip():
+
+            player = (name.strip(), cat.upper())
 
             if len(st.session_state.queue) < COURT_LIMITS[st.session_state.court_count]:
                 st.session_state.queue.append(player)
@@ -219,7 +213,7 @@ else:
 
 
 # =========================================================
-# 🔥 AUTO START EMPTY COURTS (NEW FEATURE)
+# AUTO FILL
 # =========================================================
 
 auto_fill_empty_courts()
@@ -262,19 +256,13 @@ for idx, court_id in enumerate(st.session_state.courts):
 
             c1, c2 = st.columns(2)
 
-            with c1:
-                st.markdown('<div class="big-btn">', unsafe_allow_html=True)
-                if st.button("🏆 A Wins", key=f"a{court_id}"):
-                    finish_match(court_id, 0)
-                    st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
+            if c1.button("🏆 A Wins", key=f"a{court_id}"):
+                finish_match(court_id, 0)
+                st.rerun()
 
-            with c2:
-                st.markdown('<div class="big-btn">', unsafe_allow_html=True)
-                if st.button("🏆 B Wins", key=f"b{court_id}"):
-                    finish_match(court_id, 1)
-                    st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
+            if c2.button("🏆 B Wins", key=f"b{court_id}"):
+                finish_match(court_id, 1)
+                st.rerun()
 
         else:
             st.info("Waiting for players...")
