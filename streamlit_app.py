@@ -162,7 +162,7 @@ if "court_count" not in st.session_state:
 # =========================================================
 
 st.title("🎾 TiraDinks Pickleball Auto Stack")
-st.caption("First come • first play • fair rotation")
+st.caption("BAWAL UMIHI DITO!")
 
 
 # =========================================================
