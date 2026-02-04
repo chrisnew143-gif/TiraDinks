@@ -130,7 +130,7 @@ if st.session_state.page == "player":
 # ORGANIZER PAGE
 # -----------------------
 if st.session_state.page == "organizer":
-    st.title("🎾 Pickleball Auto Stack (Organizer)")
+    st.title("🎾 TiraDinks Pickleball Auto Stack (Organizer)")
     st.caption("First come, first play • Fair skill matching • Tap winners to continue")
 
     with st.sidebar:
