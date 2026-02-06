@@ -17,8 +17,8 @@ if st.session_state.page == "home":
     if col1.button("🏟 Organizer (AutoStack)", use_container_width=True):
         go("autostack")
 
-    if col2.button("👤 Player Join", use_container_width=True):
-        go("player")
+    if col2.button("👤 Clubs", use_container_width=True):
+        go("registerclub")
 
 elif st.session_state.page == "autostack":
     import AutoStack   # your module file
