@@ -3,6 +3,15 @@ import random
 from collections import deque
 
 # =========================================================
+# ROUTER (same as home page)
+# =========================================================
+
+def go(page: str):
+    st.session_state.page = page
+    st.rerun()
+
+
+# =========================================================
 # PAGE CONFIG
 # =========================================================
 
@@ -11,6 +20,7 @@ st.set_page_config(
     page_icon="🎾",
     layout="wide"
 )
+
 
 # =========================================================
 # CONFIG
@@ -22,10 +32,8 @@ COURT_LIMITS = {
     4: 36,
     5: 46,
     6: 56,
-    7: 66,
+    7: 66
 }
-
-HOME_FILE = "streamlit_app.py"   # 👈 your real home page
 
 
 # =========================================================
@@ -74,7 +82,7 @@ def skill_icon(cat):
     return {
         "BEGINNER": "🟢",
         "NOVICE": "🟡",
-        "INTERMEDIATE": "🔴",
+        "INTERMEDIATE": "🔴"
     }[cat]
 
 
@@ -118,13 +126,13 @@ def pick_four_fifo_safe(queue):
 # =========================================================
 
 def start_match(court_id):
-    four = pick_four_fifo_safe(st.session_state.queue)
+    players = pick_four_fifo_safe(st.session_state.queue)
 
-    if not four:
+    if not players:
         st.session_state.courts[court_id] = None
         return False
 
-    st.session_state.courts[court_id] = make_teams(four)
+    st.session_state.courts[court_id] = make_teams(players)
     return True
 
 
@@ -167,9 +175,9 @@ st.caption("First come • first play • fair rotation")
 
 with st.sidebar:
 
-    # ⭐ HOME BUTTON
-    if st.button("🏠 Back to Home", use_container_width=True):
-        st.switch_page(HOME_FILE)
+    # ⭐ BACK BUTTON (same system as home)
+    if st.button("🏠 Home", use_container_width=True):
+        go("home")
 
     st.divider()
 
@@ -212,14 +220,14 @@ with st.sidebar:
 
 
 # =========================================================
-# AUTO FILL EMPTY COURTS
+# AUTO FILL
 # =========================================================
 
 auto_fill()
 
 
 # =========================================================
-# WAITING QUEUE
+# WAITING LIST
 # =========================================================
 
 st.subheader("⏳ Waiting Queue")
