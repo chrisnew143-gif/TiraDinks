@@ -17,7 +17,7 @@ COURT_LIMITS = {
 
 
 # =========================================================
-# PAGE
+# PAGE CONFIG
 # =========================================================
 
 st.set_page_config(
@@ -25,6 +25,11 @@ st.set_page_config(
     page_icon="🎾",
     layout="wide"
 )
+
+
+# =========================================================
+# STYLES
+# =========================================================
 
 st.markdown("""
 <style>
@@ -134,7 +139,7 @@ def auto_fill_empty_courts():
 
 
 # =========================================================
-# SESSION STATE
+# SESSION STATE INIT
 # =========================================================
 
 if "queue" not in st.session_state:
@@ -164,17 +169,24 @@ st.caption("First come • first play • fair rotation")
 
 with st.sidebar:
 
+    # ⭐ BACK TO HOME BUTTON
+    if st.button("🏠 Home", use_container_width=True):
+        st.switch_page("app.py")  # change if your main file name is different
+
+    st.divider()
+
     st.header("⚙ Setup")
 
     st.session_state.court_count = st.selectbox(
         "Number of courts",
-        list(COURT_LIMITS.keys())   # ✅ dynamic 2–7
+        list(COURT_LIMITS.keys())
     )
 
     st.write(f"Max players: **{COURT_LIMITS[st.session_state.court_count]}**")
 
     st.divider()
 
+    # ADD PLAYER
     st.subheader("➕ Add Player")
 
     with st.form("add_player_form", clear_on_submit=True):
@@ -193,14 +205,15 @@ with st.sidebar:
 
     st.divider()
 
-    if st.button("🚀 Start Games"):
+    # CONTROLS
+    if st.button("🚀 Start Games", use_container_width=True):
         st.session_state.started = True
         st.session_state.courts = {
             i: None for i in range(1, st.session_state.court_count + 1)
         }
         st.rerun()
 
-    if st.button("🔄 Reset All"):
+    if st.button("🔄 Reset All", use_container_width=True):
         st.session_state.queue = deque()
         st.session_state.courts = {}
         st.session_state.started = False
@@ -243,14 +256,13 @@ if not st.session_state.started:
 
 
 # =========================================================
-# COURTS DISPLAY (WRAP FOR MANY COURTS)
+# COURTS DISPLAY
 # =========================================================
 
 st.divider()
 st.subheader("🏟 Live Courts")
 
-per_row = 3   # nice layout when many courts
-
+per_row = 3
 court_ids = list(st.session_state.courts.keys())
 
 for row in range(0, len(court_ids), per_row):
