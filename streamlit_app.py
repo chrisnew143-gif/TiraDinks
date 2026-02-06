@@ -5,6 +5,5 @@ st.title("🎾 Pickleball Stack System")
 
 col1, col2 = st.columns(2)
 
-# Just use the file name without `.py`
 if col1.button("🏟 Organizer (AutoStack)", use_container_width=True):
-    st.switch_page("1_🏟_AutoStack")
+    st.switch_page("1_AutoStack")  # must match the file name (without .py)
