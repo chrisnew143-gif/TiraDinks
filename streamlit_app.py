@@ -20,13 +20,16 @@ if st.session_state.page == "home":
 
     st.title("🎾 Pickleball Stack System")
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
     if col1.button("🏟 Organizer (AutoStack)", use_container_width=True):
         go("autostack")
 
     if col2.button("🏢 Clubs", use_container_width=True):
         go("registerclub")
+
+    if col3.button("🏢 Players", use_container_width=True):
+        go("Player")
 
 
 # =========================
