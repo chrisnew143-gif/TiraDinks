@@ -56,7 +56,6 @@ def pick_four_fifo_safe(queue):
     return None
 
 def record_match(teams, scoreA, scoreB, court_id):
-    # Record match to CSV
     data = {
         "Court": court_id,
         "TeamA": " & ".join([p[0] for p in teams[0]]),
@@ -88,9 +87,8 @@ def submit_score(court_id, scoreA, scoreB):
     # Record match
     record_match(teams, scoreA, scoreB, court_id)
 
-    # Combine players back
+    # Combine players back and mix with waiting queue
     players = teams[0] + teams[1]
-    # Mix with waiting queue
     new_four = []
     while len(new_four) < 4 and st.session_state.queue:
         new_four.append(st.session_state.queue.popleft())
@@ -102,9 +100,8 @@ def submit_score(court_id, scoreA, scoreB):
     else:
         st.session_state.courts[court_id] = None
 
-    # Reset score inputs
-    st.session_state[f"scoreA{court_id}"] = 0
-    st.session_state[f"scoreB{court_id}"] = 0
+    # Clear stored score so widget shows 0 next rerun
+    st.session_state[f"submitted{court_id}"] = True
 
 def auto_fill_empty_courts():
     if not st.session_state.started:
@@ -124,6 +121,8 @@ if "started" not in st.session_state:
     st.session_state.started = False
 if "court_count" not in st.session_state:
     st.session_state.court_count = 2
+if "submitted" not in st.session_state:
+    st.session_state.submitted = {}
 
 # =========================================================
 # HEADER
@@ -161,6 +160,7 @@ with st.sidebar:
         st.session_state.queue = deque()
         st.session_state.courts = {}
         st.session_state.started = False
+        st.session_state.submitted = {}
 
 # =========================================================
 # AUTO FILL COURTS
@@ -205,18 +205,23 @@ for row in range(0, len(court_ids), per_row):
                 st.write(f"**Team A**  \n{teamA}")
                 st.write(f"**Team B**  \n{teamB}")
 
-                # Score inputs
+                # Reset score to 0 after submit
+                scoreA_val = 0 if st.session_state.submitted.get(court_id) else 0
+                scoreB_val = 0 if st.session_state.submitted.get(court_id) else 0
+
                 scoreA = st.number_input(f"Score Team A (Court {court_id})",
                                          min_value=0,
-                                         value=st.session_state.get(f"scoreA{court_id}", 0),
+                                         value=scoreA_val,
                                          key=f"scoreA{court_id}")
                 scoreB = st.number_input(f"Score Team B (Court {court_id})",
                                          min_value=0,
-                                         value=st.session_state.get(f"scoreB{court_id}", 0),
+                                         value=scoreB_val,
                                          key=f"scoreB{court_id}")
 
                 if st.button("Submit Score", key=f"submit{court_id}"):
                     submit_score(court_id, scoreA, scoreB)
+                    st.session_state.submitted[court_id] = True
+                    st.experimental_rerun()  # refresh to reset widgets
 
             else:
                 st.info("Waiting for players...")
