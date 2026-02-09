@@ -14,11 +14,7 @@ RESULTS_FILE = "pickleball_results.csv"
 # =========================================================
 # PAGE SETUP
 # =========================================================
-st.set_page_config(
-    page_title="Pickleball Auto Stack",
-    page_icon="🎾",
-    layout="wide"
-)
+st.set_page_config(page_title="Pickleball Auto Stack", page_icon="🎾", layout="wide")
 
 st.markdown("""
 <style>
@@ -87,21 +83,11 @@ def submit_score(court_id, scoreA, scoreB):
     # Record match
     record_match(teams, scoreA, scoreB, court_id)
 
-    # Combine players back and mix with waiting queue
+    # Combine players and remix with waiting queue
     players = teams[0] + teams[1]
-    new_four = []
-    while len(new_four) < 4 and st.session_state.queue:
-        new_four.append(st.session_state.queue.popleft())
-    remaining = [p for p in players if p not in new_four]
-    new_four += remaining[:4-len(new_four)]
-
-    if len(new_four) == 4:
-        st.session_state.courts[court_id] = make_teams(new_four)
-    else:
-        st.session_state.courts[court_id] = None
-
-    # Clear stored score so widget shows 0 next rerun
-    st.session_state[f"submitted{court_id}"] = True
+    st.session_state.queue.extend(players)  # return all players to queue
+    st.session_state.courts[court_id] = None  # reset court
+    st.session_state.submitted[court_id] = True  # mark submitted
 
 def auto_fill_empty_courts():
     if not st.session_state.started:
@@ -205,23 +191,19 @@ for row in range(0, len(court_ids), per_row):
                 st.write(f"**Team A**  \n{teamA}")
                 st.write(f"**Team B**  \n{teamB}")
 
-                # Reset score to 0 after submit
-                scoreA_val = 0 if st.session_state.submitted.get(court_id) else 0
-                scoreB_val = 0 if st.session_state.submitted.get(court_id) else 0
+                # Reset scores to 0 after submission
+                defaultA = 0
+                defaultB = 0
+                if st.session_state.submitted.get(court_id):
+                    defaultA = 0
+                    defaultB = 0
+                    st.session_state.submitted[court_id] = False  # reset flag
 
-                scoreA = st.number_input(f"Score Team A (Court {court_id})",
-                                         min_value=0,
-                                         value=scoreA_val,
-                                         key=f"scoreA{court_id}")
-                scoreB = st.number_input(f"Score Team B (Court {court_id})",
-                                         min_value=0,
-                                         value=scoreB_val,
-                                         key=f"scoreB{court_id}")
+                scoreA = st.number_input(f"Score Team A (Court {court_id})", min_value=0, value=defaultA, key=f"scoreA{court_id}")
+                scoreB = st.number_input(f"Score Team B (Court {court_id})", min_value=0, value=defaultB, key=f"scoreB{court_id}")
 
                 if st.button("Submit Score", key=f"submit{court_id}"):
                     submit_score(court_id, scoreA, scoreB)
-                    st.session_state.submitted[court_id] = True
-                    st.experimental_rerun()  # refresh to reset widgets
 
             else:
                 st.info("Waiting for players...")
