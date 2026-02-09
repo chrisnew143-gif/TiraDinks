@@ -9,8 +9,8 @@ import pandas as pd
 # CONFIG
 # =========================================================
 
-MAX_PER_COURT = 10   # Maximum players per court
-RESULTS_FILE = Path("pickleball_results.csv")  # CSV to store results
+MAX_PER_COURT = 10
+RESULTS_FILE = Path("pickleball_results.csv")
 
 # =========================================================
 # PAGE SETUP
@@ -57,7 +57,6 @@ def is_safe_combo(players):
     return not ("BEGINNER" in skills and "INTERMEDIATE" in skills)
 
 def pick_four_fifo_safe(queue):
-    """Pick a safe group of 4 players from the queue."""
     if len(queue) < 4:
         return None
     players = list(queue)
@@ -69,7 +68,6 @@ def pick_four_fifo_safe(queue):
     return None
 
 def start_match(court_id):
-    """Start a match for a court if possible."""
     four = pick_four_fifo_safe(st.session_state.queue)
     if four:
         st.session_state.courts[court_id] = make_teams(four)
@@ -77,7 +75,6 @@ def start_match(court_id):
         st.session_state.courts[court_id] = None
 
 def auto_fill_empty_courts():
-    """Fill empty courts automatically."""
     if not st.session_state.started:
         return
     for c in st.session_state.courts:
@@ -85,23 +82,20 @@ def auto_fill_empty_courts():
             start_match(c)
 
 def submit_score(court_id, scoreA, scoreB):
-    """Submit scores, determine winner, update queue, and log results."""
     teams = st.session_state.courts[court_id]
     if not teams:
         return
-
     if scoreA == scoreB:
-        st.warning(f"Court {court_id}: Scores are tied. Please adjust.")
+        st.warning(f"Court {court_id}: Scores are tied. Adjust scores.")
         return
-
     winner_idx = 0 if scoreA > scoreB else 1
     winners = teams[winner_idx]
     losers = teams[1 - winner_idx]
 
-    # Losing players back to queue
+    # Return losing players to queue
     st.session_state.queue.extend(losers)
 
-    # Log the result to CSV
+    # Log match to CSV
     match_result = {
         "Court": court_id,
         "TeamA": " & ".join(format_player(p) for p in teams[0]),
@@ -116,11 +110,11 @@ def submit_score(court_id, scoreA, scoreB):
         df = pd.concat([df, pd.DataFrame([match_result])], ignore_index=True)
     else:
         df = pd.DataFrame([match_result])
-
     df.to_csv(RESULTS_FILE, index=False)
 
-    # Start new match
+    # Start new match and force re-render via session_state flag
     start_match(court_id)
+    st.session_state.updated = True
 
 # =========================================================
 # SESSION STATE
@@ -137,6 +131,9 @@ if "started" not in st.session_state:
 
 if "court_count" not in st.session_state:
     st.session_state.court_count = 2
+
+if "updated" not in st.session_state:
+    st.session_state.updated = False  # Trigger re-render after score submission
 
 # =========================================================
 # HEADER
@@ -228,13 +225,14 @@ for row in range(0, len(court_ids), per_row):
                 st.write(f"**Team A**  \n{teamA}")
                 st.write(f"**Team B**  \n{teamB}")
 
-                # Score input boxes
+                # Score inputs
                 scoreA = st.number_input(f"Score Team A (Court {court_id})", min_value=0, step=1, key=f"scoreA_{court_id}")
                 scoreB = st.number_input(f"Score Team B (Court {court_id})", min_value=0, step=1, key=f"scoreB_{court_id}")
 
                 if st.button("Submit Score", key=f"submit_{court_id}"):
                     submit_score(court_id, scoreA, scoreB)
-                    st.experimental_rerun()
+
             else:
                 st.info("Waiting for players...")
+
             st.markdown('</div>', unsafe_allow_html=True)
