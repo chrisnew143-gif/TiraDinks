@@ -44,7 +44,6 @@ def is_safe_combo(players):
     return not ("BEGINNER" in skills and "INTERMEDIATE" in skills)
 
 def pick_four_fifo_safe(queue):
-    """Pick first safe 4-player combo from queue."""
     if len(queue) < 4:
         return None
     players = list(queue)
@@ -60,7 +59,6 @@ def pick_four_fifo_safe(queue):
 # =========================================================
 
 def start_match(court_id):
-    """Start match on a court if empty."""
     if st.session_state.courts.get(court_id) is None:
         four = pick_four_fifo_safe(st.session_state.queue)
         if four:
@@ -71,21 +69,19 @@ def start_match(court_id):
             }
 
 def submit_score(court_id):
-    """Submit scores and rotate players."""
-    court = st.session_state.courts[court_id]
-    if not court:
+    court = st.session_state.courts.get(court_id)
+    if not court or not court.get("teams"):
         return
 
     scoreA = court["scoreA"]
     scoreB = court["scoreB"]
+    teams = court["teams"]
 
     if scoreA == scoreB:
         st.warning(f"Court {court_id}: Scores are tied. Adjust scores.")
         return
 
-    teams = court["teams"]
-
-    # Log result
+    # Log match result
     match_result = {
         "Court": court_id,
         "TeamA": " & ".join(format_player(p) for p in teams[0]),
@@ -105,8 +101,12 @@ def submit_score(court_id):
     # Return players to queue
     st.session_state.queue.extend(teams[0] + teams[1])
 
-    # Clear this court for next match
-    st.session_state.courts[court_id] = None
+    # Reset the court for next match
+    st.session_state.courts[court_id] = {
+        "teams": None,
+        "scoreA": 0,
+        "scoreB": 0
+    }
 
 # =========================================================
 # SESSION STATE
@@ -202,15 +202,15 @@ for row in range(0, len(court_ids), per_row):
             st.markdown('<div class="court-card">', unsafe_allow_html=True)
             st.markdown(f"### Court {court_id}")
 
-            court = st.session_state.courts[court_id]
-            if court:
+            court = st.session_state.courts.get(court_id)
+            if court and court.get("teams"):
                 teams = court["teams"]
                 teamA = " & ".join(format_player(p) for p in teams[0])
                 teamB = " & ".join(format_player(p) for p in teams[1])
                 st.write(f"**Team A**  \n{teamA}")
                 st.write(f"**Team B**  \n{teamB}")
 
-                # Score inputs
+                # Score inputs reset automatically after submission
                 court["scoreA"] = st.number_input(f"Score Team A (Court {court_id})", min_value=0, step=1, key=f"scoreA{court_id}")
                 court["scoreB"] = st.number_input(f"Score Team B (Court {court_id})", min_value=0, step=1, key=f"scoreB{court_id}")
 
