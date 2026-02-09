@@ -1,6 +1,7 @@
 import streamlit as st
 import random
 from collections import deque
+from itertools import combinations
 
 # =========================================================
 # CONFIG
@@ -25,16 +26,8 @@ st.set_page_config(
     layout="wide"
 )
 
-# =========================================================
-# STYLES
-# =========================================================
-
 st.markdown("""
 <style>
-.big-btn button {
-    height: 60px;
-    font-size: 18px;
-}
 .court-card {
     padding: 15px;
     border-radius: 15px;
@@ -70,7 +63,7 @@ def make_teams(players):
     return [players[:2], players[2:]]
 
 # =========================================================
-# FIFO SAFE MATCHING
+# SAFE MATCHING LOGIC (FIXED)
 # =========================================================
 
 def is_safe_combo(players):
@@ -79,19 +72,23 @@ def is_safe_combo(players):
 
 
 def pick_four_fifo_safe(queue):
-    """Always picks earliest safe 4 players"""
+    """
+    FIX:
+    Instead of only checking consecutive players,
+    try ALL 4-player combinations while keeping FIFO fairness.
+    Prevents blocking when skills are mixed.
+    """
+
     if len(queue) < 4:
         return None
 
-    temp = list(queue)
+    players = list(queue)
 
-    for i in range(len(temp) - 3):
-        group = temp[i:i+4]
-
-        if is_safe_combo(group):
-            for p in group:
+    for combo in combinations(players, 4):
+        if is_safe_combo(combo):
+            for p in combo:
                 queue.remove(p)
-            return group
+            return list(combo)
 
     return None
 
@@ -102,11 +99,12 @@ def pick_four_fifo_safe(queue):
 def start_match(court_id):
     four = pick_four_fifo_safe(st.session_state.queue)
 
-    if not four:
-        return False
+    if four:
+        st.session_state.courts[court_id] = make_teams(four)
+        return True
 
-    st.session_state.courts[court_id] = make_teams(four)
-    return True
+    st.session_state.courts[court_id] = None
+    return False
 
 
 def finish_match(court_id, winner_idx):
@@ -115,14 +113,17 @@ def finish_match(court_id, winner_idx):
     winners = teams[winner_idx]
     losers = teams[1 - winner_idx]
 
-    # FIFO rotation → winners & losers go back
     st.session_state.queue.extend(winners + losers)
-
-    st.session_state.courts[court_id] = None
+    start_match(court_id)
 
 
 def auto_fill_empty_courts():
-    """Always fill courts every rerun (NO rerun needed)"""
+    """
+    Always try to fill every empty court.
+    No 'changed' detection needed.
+    Streamlit already reruns automatically.
+    """
+
     if not st.session_state.started:
         return
 
@@ -170,11 +171,10 @@ with st.sidebar:
 
     st.divider()
 
-    # ---------------- ADD PLAYER ----------------
+    # Add player
     st.subheader("➕ Add Player")
 
     with st.form("add_player_form", clear_on_submit=True):
-
         name = st.text_input("Name")
 
         cat = st.radio(
@@ -189,20 +189,21 @@ with st.sidebar:
 
     st.divider()
 
-    # ---------------- CONTROLS ----------------
+    # Start
     if st.button("🚀 Start Games", use_container_width=True):
         st.session_state.started = True
         st.session_state.courts = {
             i: None for i in range(1, st.session_state.court_count + 1)
         }
 
+    # Reset
     if st.button("🔄 Reset All", use_container_width=True):
         st.session_state.queue = deque()
         st.session_state.courts = {}
         st.session_state.started = False
 
 # =========================================================
-# AUTO FILL (FIXED — ALWAYS RUN)
+# AUTO FILL (ALWAYS RUN)
 # =========================================================
 
 auto_fill_empty_courts()
@@ -232,7 +233,7 @@ if not st.session_state.started:
     st.stop()
 
 # =========================================================
-# COURTS DISPLAY
+# COURTS
 # =========================================================
 
 st.divider()
