@@ -13,15 +13,11 @@ st.set_page_config(
 )
 
 # =========================================================
-# CSS  (hide ONLY github icon)
+# CSS (hide only github icon)
 # =========================================================
 st.markdown("""
 <style>
-
-/* hide only github icon */
-a[href*="github.com/streamlit"]{
-    display:none !important;
-}
+a[href*="github.com/streamlit"]{display:none!important;}
 
 .court-card{
     padding:18px;
@@ -36,16 +32,12 @@ a[href*="github.com/streamlit"]{
     border-radius:10px;
     font-size:17px;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
 st.title("🎾 Pickleball Auto Stack")
 st.caption("First come • first play • fair rotation")
 
-# =========================================================
-# CONSTANTS
-# =========================================================
 MAX_PER_COURT = 10
 
 
@@ -60,8 +52,8 @@ def icon(skill):
     }[skill]
 
 
-def fmt(player):
-    return f"{icon(player[1])} {player[0]}"
+def fmt(p):
+    return f"{icon(p[1])} {p[0]}"
 
 
 def make_teams(players):
@@ -74,7 +66,6 @@ def make_teams(players):
 # =========================================================
 def init():
     ss = st.session_state
-
     ss.setdefault("queue", deque())
     ss.setdefault("courts", {})
     ss.setdefault("locked", {})
@@ -83,24 +74,19 @@ def init():
     ss.setdefault("started", False)
     ss.setdefault("court_count", 2)
 
-
 init()
 
 
 # =========================================================
-# MATCH ENGINE (VERY STABLE)
+# MATCH ENGINE
 # =========================================================
 def take_four():
-    """FIFO take first 4 players"""
     if len(st.session_state.queue) < 4:
         return None
-
     return [st.session_state.queue.popleft() for _ in range(4)]
 
 
 def start_match(cid):
-    """Start ONLY this court (no global reshuffle)"""
-
     if st.session_state.locked[cid]:
         return
 
@@ -114,8 +100,6 @@ def start_match(cid):
 
 
 def finish_match(cid):
-    """Finish ONLY this court"""
-
     teams = st.session_state.courts[cid]
     scoreA, scoreB = st.session_state.scores[cid]
 
@@ -130,19 +114,17 @@ def finish_match(cid):
         "Score B": scoreB
     })
 
-    # mix players back
+    # mix back
     random.shuffle(players)
-    for p in players:
-        st.session_state.queue.append(p)
+    st.session_state.queue.extend(players)
 
-    # unlock + reset
+    # reset
     st.session_state.courts[cid] = None
     st.session_state.locked[cid] = False
     st.session_state.scores[cid] = [0, 0]
 
 
 def auto_fill():
-    """Fill only empty courts"""
     if not st.session_state.started:
         return
 
@@ -152,14 +134,13 @@ def auto_fill():
 
 
 # =========================================================
-# CSV DOWNLOAD (no openpyxl needed)
+# CSV
 # =========================================================
 def create_csv():
     if not st.session_state.history:
         return b""
-
     df = pd.DataFrame(st.session_state.history)
-    return df.to_csv(index=False).encode("utf-8")
+    return df.to_csv(index=False).encode()
 
 
 # =========================================================
@@ -168,53 +149,43 @@ def create_csv():
 with st.sidebar:
     st.header("⚙ Setup")
 
-    st.session_state.court_count = st.selectbox(
-        "Courts",
-        [2, 3, 4, 5, 6]
-    )
+    st.session_state.court_count = st.selectbox("Courts", [2,3,4,5,6])
 
-    st.write(f"Max players: **{MAX_PER_COURT * st.session_state.court_count}**")
-
-    st.divider()
-
-    # ADD PLAYER
-    with st.form("add_player", clear_on_submit=True):
+    with st.form("add", clear_on_submit=True):
         name = st.text_input("Name")
-        skill = st.radio("Skill", ["Beginner", "Novice", "Intermediate"])
+        skill = st.radio("Skill", ["Beginner","Novice","Intermediate"])
         ok = st.form_submit_button("Add Player")
 
         if ok and name:
             st.session_state.queue.append((name, skill.upper()))
 
-    st.divider()
-
-    # START
-    if st.button("🚀 Start Games", use_container_width=True):
+    if st.button("🚀 Start Games"):
         st.session_state.started = True
-        st.session_state.courts = {i: None for i in range(1, st.session_state.court_count + 1)}
-        st.session_state.locked = {i: False for i in range(1, st.session_state.court_count + 1)}
-        st.session_state.scores = {i: [0, 0] for i in range(1, st.session_state.court_count + 1)}
+        st.session_state.courts = {i:None for i in range(1, st.session_state.court_count+1)}
+        st.session_state.locked = {i:False for i in range(1, st.session_state.court_count+1)}
+        st.session_state.scores = {i:[0,0] for i in range(1, st.session_state.court_count+1)}
         st.rerun()
 
-    # RESET
-    if st.button("🔄 Reset All", use_container_width=True):
+    if st.button("🔄 Reset"):
         st.session_state.clear()
         st.rerun()
 
-    st.divider()
-
-    # DOWNLOAD RESULTS
     st.download_button(
         "📥 Download Results (CSV)",
         data=create_csv(),
         file_name="pickleball_results.csv",
-        mime="text/csv",
-        use_container_width=True
+        mime="text/csv"
     )
 
 
 # =========================================================
-# WAITING QUEUE
+# 🔥 IMPORTANT: FILL COURTS FIRST (FIXES YOUR BUG)
+# =========================================================
+auto_fill()
+
+
+# =========================================================
+# WAITING QUEUE (now correct)
 # =========================================================
 st.subheader("⏳ Waiting Queue")
 
@@ -228,18 +199,15 @@ else:
 
 
 # =========================================================
-# STOP IF NOT STARTED
+# STOP
 # =========================================================
 if not st.session_state.started:
-    st.info("Add players then press **Start Games**")
     st.stop()
 
 
 # =========================================================
-# LIVE COURTS
+# COURTS
 # =========================================================
-auto_fill()
-
 st.divider()
 st.subheader("🏟 Live Courts")
 
@@ -252,9 +220,7 @@ for r in range(0, len(ids), per_row):
     for i, cid in enumerate(ids[r:r+per_row]):
 
         with cols[i]:
-
             st.markdown('<div class="court-card">', unsafe_allow_html=True)
-            st.markdown(f"### Court {cid}")
 
             teams = st.session_state.courts[cid]
 
@@ -270,11 +236,8 @@ for r in range(0, len(ids), per_row):
             scoreB = st.number_input("Score B", 0, key=f"B{cid}")
 
             if st.button("Submit Score", key=f"S{cid}"):
-
                 st.session_state.scores[cid] = [scoreA, scoreB]
-
                 finish_match(cid)
-
                 st.rerun()
 
             st.markdown('</div>', unsafe_allow_html=True)
