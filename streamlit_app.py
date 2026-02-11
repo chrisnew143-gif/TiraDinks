@@ -3,6 +3,7 @@ import random
 from collections import deque
 import pandas as pd
 from itertools import combinations
+from io import BytesIO
 
 # ======================================================
 # PAGE
@@ -30,6 +31,7 @@ a[href*="github.com/streamlit"]{display:none!important;}
 st.title("🎾 Pickleball Auto Stack")
 st.caption("First come • first play • fair rotation")
 
+
 # ======================================================
 # HELPERS
 # ======================================================
@@ -37,12 +39,11 @@ def icon(skill):
     return {"BEGINNER":"🟢","NOVICE":"🟡","INTERMEDIATE":"🔴"}[skill]
 
 def fmt(p):
-    # show only name + skill icon (hide DUPR)
     return f"{icon(p[1])} {p[0]}"
 
 
 # ======================================================
-# SAFETY RULE
+# SAFETY
 # ======================================================
 def safe_group(players):
     skills = {p[1] for p in players}
@@ -64,6 +65,7 @@ def init():
     ss.setdefault("locked", {})
     ss.setdefault("scores", {})
     ss.setdefault("history", [])
+    ss.setdefault("players_db", {})      # ⭐ store unique players
     ss.setdefault("started", False)
     ss.setdefault("court_count", 2)
 
@@ -97,7 +99,6 @@ def start_match(cid):
         return
 
     players = take_four_safe()
-
     if not players:
         return
 
@@ -112,16 +113,11 @@ def finish_match(cid):
 
     players = teams[0] + teams[1]
 
-    # ⭐ include DUPR in CSV only
+    # ⭐ MATCHES sheet only clean data
     st.session_state.history.append({
         "Court": cid,
-
         "Team A": " & ".join(p[0] for p in teams[0]),
         "Team B": " & ".join(p[0] for p in teams[1]),
-
-        "Team A DUPR": " & ".join(p[2] for p in teams[0]),
-        "Team B DUPR": " & ".join(p[2] for p in teams[1]),
-
         "Score A": scoreA,
         "Score B": scoreB
     })
@@ -137,20 +133,30 @@ def finish_match(cid):
 def auto_fill():
     if not st.session_state.started:
         return
-
     for cid in st.session_state.courts:
         if st.session_state.courts[cid] is None:
             start_match(cid)
 
 
 # ======================================================
-# CSV
+# ⭐ EXCEL EXPORT (2 SHEETS)
 # ======================================================
-def create_csv():
-    if not st.session_state.history:
-        return b""
-    df = pd.DataFrame(st.session_state.history)
-    return df.to_csv(index=False).encode()
+def create_excel():
+
+    output = BytesIO()
+
+    matches_df = pd.DataFrame(st.session_state.history)
+
+    players_df = pd.DataFrame([
+        {"Name":n, "Skill":s, "DUPR ID":d}
+        for n,(s,d) in st.session_state.players_db.items()
+    ])
+
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        matches_df.to_excel(writer, sheet_name="Matches", index=False)
+        players_df.to_excel(writer, sheet_name="Players", index=False)
+
+    return output.getvalue()
 
 
 # ======================================================
@@ -162,29 +168,15 @@ with st.sidebar:
 
     st.session_state.court_count = st.selectbox("Courts",[2,3,4,5,6])
 
-    # ADD PLAYER
     with st.form("add", clear_on_submit=True):
         name = st.text_input("Name")
-        dupr = st.text_input("DUPR ID (optional)")
+        dupr = st.text_input("DUPR ID")
         skill = st.radio("Skill",["Beginner","Novice","Intermediate"])
 
         if st.form_submit_button("Add"):
             if name:
-                st.session_state.queue.appendleft(
-                    (name, skill.upper(), dupr if dupr else "")
-                )
-
-    # REMOVE PLAYER
-    if st.session_state.queue:
-        st.subheader("❌ Remove Player")
-        names = [p[0] for p in st.session_state.queue]
-        pick = st.selectbox("Player", names)
-
-        if st.button("Remove"):
-            st.session_state.queue = deque(
-                [p for p in st.session_state.queue if p[0] != pick]
-            )
-            st.rerun()
+                st.session_state.queue.appendleft((name,skill.upper(),dupr))
+                st.session_state.players_db[name]=(skill.upper(),dupr)
 
     st.divider()
 
@@ -200,22 +192,18 @@ with st.sidebar:
         st.rerun()
 
     st.download_button(
-        "📥 Download CSV",
-        data=create_csv(),
-        file_name="results.csv",
-        mime="text/csv"
+        "📥 Download Results (Excel)",
+        data=create_excel(),
+        file_name="pickleball_results.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
 
 # ======================================================
-# FILL COURTS
+# RUN
 # ======================================================
 auto_fill()
 
-
-# ======================================================
-# QUEUE
-# ======================================================
 st.subheader("⏳ Waiting Queue")
 
 if st.session_state.queue:
