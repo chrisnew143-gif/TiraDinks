@@ -12,9 +12,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# =========================================================
-# CSS
-# =========================================================
+# Hide ONLY github icon
 st.markdown("""
 <style>
 a[href*="github.com/streamlit"]{display:none!important;}
@@ -56,31 +54,35 @@ def fmt(p):
     return f"{icon(p[1])} {p[0]}"
 
 
-# ---------------------------------------------------------
-# ⭐ SMART TEAM BALANCER (NEW)
-# ---------------------------------------------------------
-skill_rank = {
-    "BEGINNER": 1,
-    "NOVICE": 2,
-    "INTERMEDIATE": 3
-}
-
-def make_teams(players):
+# =========================================================
+# ⭐ SAFE MATCH RULES (THE IMPORTANT PART)
+# =========================================================
+def safe_pair(a, b):
     """
-    Balanced snake draft:
-    strongest -> A
-    next -> B
-    next -> B
-    last -> A
+    Beginner ❌ Intermediate
+    Everything else ✅
+    """
+    s = {a[1], b[1]}
+    return not ("BEGINNER" in s and "INTERMEDIATE" in s)
+
+
+def make_safe_teams(players):
+    """
+    Create teams WITHOUT beginner vs intermediate
     """
     random.shuffle(players)
 
-    players.sort(key=lambda x: skill_rank[x[1]], reverse=True)
+    for i in range(len(players)):
+        for j in range(i + 1, len(players)):
+            if safe_pair(players[i], players[j]):
+                teamA = [players[i], players[j]]
+                rest = [p for k, p in enumerate(players) if k not in (i, j)]
 
-    teamA = [players[0], players[3]]
-    teamB = [players[1], players[2]]
+                if safe_pair(rest[0], rest[1]):
+                    return [teamA, rest]
 
-    return [teamA, teamB]
+    # fallback (should rarely happen)
+    return [players[:2], players[2:]]
 
 
 # =========================================================
@@ -95,6 +97,7 @@ def init():
     ss.setdefault("history", [])
     ss.setdefault("started", False)
     ss.setdefault("court_count", 2)
+
 
 init()
 
@@ -116,7 +119,7 @@ def start_match(cid):
     if not players:
         return
 
-    st.session_state.courts[cid] = make_teams(players)
+    st.session_state.courts[cid] = make_safe_teams(players)
     st.session_state.locked[cid] = True
     st.session_state.scores[cid] = [0, 0]
 
@@ -127,6 +130,7 @@ def finish_match(cid):
 
     players = teams[0] + teams[1]
 
+    # save history
     st.session_state.history.append({
         "Court": cid,
         "Team A": " & ".join(p[0] for p in teams[0]),
@@ -153,15 +157,6 @@ def auto_fill():
 
 
 # =========================================================
-# DELETE PLAYER
-# =========================================================
-def delete_player(target):
-    st.session_state.queue = deque(
-        p for p in st.session_state.queue if p != target
-    )
-
-
-# =========================================================
 # CSV
 # =========================================================
 def create_csv():
@@ -179,33 +174,30 @@ with st.sidebar:
 
     st.session_state.court_count = st.selectbox("Courts", [2,3,4,5,6])
 
-    # -----------------------------------------------------
-    # ⭐ ADD PLAYER (NEW = FIRST POSITION)
-    # -----------------------------------------------------
+    # =========================
+    # ADD PLAYER (FRONT)
+    # =========================
     with st.form("add", clear_on_submit=True):
         name = st.text_input("Name")
         skill = st.radio("Skill", ["Beginner","Novice","Intermediate"])
         ok = st.form_submit_button("Add Player")
 
         if ok and name:
-            st.session_state.queue.appendleft((name, skill.upper()))
-            st.rerun()
+            st.session_state.queue.appendleft((name, skill.upper()))  # ⭐ FRONT
 
-    # -----------------------------------------------------
-    # DELETE
-    # -----------------------------------------------------
+    # =========================
+    # DELETE PLAYER
+    # =========================
     if st.session_state.queue:
-        st.divider()
         st.subheader("❌ Remove Player")
 
-        player_to_remove = st.selectbox(
-            "Select player",
-            list(st.session_state.queue),
-            format_func=lambda x: fmt(x)
-        )
+        options = [p[0] for p in st.session_state.queue]
+        remove_name = st.selectbox("Select player", options)
 
-        if st.button("Delete Selected Player"):
-            delete_player(player_to_remove)
+        if st.button("Remove"):
+            st.session_state.queue = deque(
+                [p for p in st.session_state.queue if p[0] != remove_name]
+            )
             st.rerun()
 
     st.divider()
@@ -222,7 +214,7 @@ with st.sidebar:
         st.rerun()
 
     st.download_button(
-        "📥 Download Results (CSV)",
+        "📥 Download Results",
         data=create_csv(),
         file_name="pickleball_results.csv",
         mime="text/csv"
@@ -230,13 +222,13 @@ with st.sidebar:
 
 
 # =========================================================
-# FILL COURTS
+# FILL FIRST
 # =========================================================
 auto_fill()
 
 
 # =========================================================
-# WAITING QUEUE
+# WAITING
 # =========================================================
 st.subheader("⏳ Waiting Queue")
 
@@ -259,32 +251,27 @@ if not st.session_state.started:
 st.divider()
 st.subheader("🏟 Live Courts")
 
-ids = list(st.session_state.courts.keys())
-per_row = 3
+for cid in st.session_state.courts:
 
-for r in range(0, len(ids), per_row):
-    cols = st.columns(per_row)
+    st.markdown('<div class="court-card">', unsafe_allow_html=True)
+    st.markdown(f"### Court {cid}")
 
-    for i, cid in enumerate(ids[r:r+per_row]):
-        with cols[i]:
-            st.markdown('<div class="court-card">', unsafe_allow_html=True)
+    teams = st.session_state.courts[cid]
 
-            teams = st.session_state.courts[cid]
+    if not teams:
+        st.info("Waiting for players...")
+        st.markdown('</div>', unsafe_allow_html=True)
+        continue
 
-            if not teams:
-                st.info("Waiting for players...")
-                st.markdown('</div>', unsafe_allow_html=True)
-                continue
+    st.write("**Team A**  \n" + " & ".join(fmt(p) for p in teams[0]))
+    st.write("**Team B**  \n" + " & ".join(fmt(p) for p in teams[1]))
 
-            st.write("**Team A**  \n" + " & ".join(fmt(p) for p in teams[0]))
-            st.write("**Team B**  \n" + " & ".join(fmt(p) for p in teams[1]))
+    scoreA = st.number_input("Score A", 0, key=f"A{cid}")
+    scoreB = st.number_input("Score B", 0, key=f"B{cid}")
 
-            scoreA = st.number_input("Score A", 0, key=f"A{cid}")
-            scoreB = st.number_input("Score B", 0, key=f"B{cid}")
+    if st.button("Submit Score", key=f"S{cid}"):
+        st.session_state.scores[cid] = [scoreA, scoreB]
+        finish_match(cid)
+        st.rerun()
 
-            if st.button("Submit Score", key=f"S{cid}"):
-                st.session_state.scores[cid] = [scoreA, scoreB]
-                finish_match(cid)
-                st.rerun()
-
-            st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
