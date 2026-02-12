@@ -5,6 +5,7 @@ import pandas as pd
 from itertools import combinations
 import json
 import os
+import time
 
 # ======================================================
 # CONFIG & FILE PATHS
@@ -96,6 +97,7 @@ def init():
     ss.setdefault("started", False)
     ss.setdefault("court_count", max(len(ss.courts), 2))
     ss.setdefault("locked", {int(k):True for k,v in ss.courts.items() if v})
+    ss.setdefault("last_save_time", time.time())
     
 init()
 
@@ -274,8 +276,22 @@ with st.sidebar:
 
     st.divider()
 
+    # MANUAL SAVE BUTTON
+    if st.button("💾 Save Now"):
+        persist_state()
+        st.success("Data saved!")
+
+    st.divider()
     st.download_button("📥 Matches CSV", matches_csv(), "matches.csv")
     st.download_button("📥 Players CSV", players_csv(), "players.csv")
+
+# ======================================================
+# AUTO SAVE EVERY 10 SECONDS
+# ======================================================
+if time.time() - st.session_state.last_save_time > 10:
+    persist_state()
+    st.session_state.last_save_time = time.time()
+    st.info("💾 Auto-saved data")
 
 # ======================================================
 # MAIN
