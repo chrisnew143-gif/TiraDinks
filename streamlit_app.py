@@ -5,18 +5,6 @@ import pandas as pd
 from itertools import combinations
 import json
 import os
-import time
-
-# ======================================================
-# CONFIG & FILE PATHS
-# ======================================================
-DATA_DIR = "data"
-os.makedirs(DATA_DIR, exist_ok=True)
-QUEUE_FILE = os.path.join(DATA_DIR, "queue.json")
-PLAYERS_FILE = os.path.join(DATA_DIR, "players.json")
-COURTS_FILE = os.path.join(DATA_DIR, "courts.json")
-SCORES_FILE = os.path.join(DATA_DIR, "scores.json")
-HISTORY_FILE = os.path.join(DATA_DIR, "history.json")
 
 # ======================================================
 # PAGE CONFIG
@@ -63,81 +51,43 @@ def make_teams(players):
     return [players[:2], players[2:]]
 
 # ======================================================
-# PERSISTENCE FUNCTIONS
-# ======================================================
-def save_json(file, data):
-    with open(file, "w") as f:
-        json.dump(data, f)
-
-def load_json(file, default):
-    if os.path.exists(file):
-        with open(file, "r") as f:
-            return json.load(f)
-    return default
-
-def persist_state():
-    ss = st.session_state
-    save_json(QUEUE_FILE, list(ss.queue))
-    save_json(PLAYERS_FILE, ss.players)
-    save_json(COURTS_FILE, {k: v for k,v in ss.courts.items()})
-    save_json(SCORES_FILE, ss.scores)
-    save_json(HISTORY_FILE, ss.history)
-
-def load_saved_state():
-    ss = st.session_state
-    ss.queue = deque(load_json(QUEUE_FILE, []))
-    ss.players = load_json(PLAYERS_FILE, {})
-    ss.courts = load_json(COURTS_FILE, {})
-    ss.scores = load_json(SCORES_FILE, {})
-    ss.history = load_json(HISTORY_FILE, [])
-    ss.started = bool(ss.courts)
-    ss.locked = {int(k):True for k,v in ss.courts.items() if v}
-
-# ======================================================
 # SESSION INIT
 # ======================================================
 def init():
     ss = st.session_state
     ss.setdefault("queue", deque())
-    ss.setdefault("players", {})
     ss.setdefault("courts", {})
+    ss.setdefault("locked", {})
     ss.setdefault("scores", {})
     ss.setdefault("history", [])
     ss.setdefault("started", False)
     ss.setdefault("court_count", 2)
-    ss.setdefault("locked", {})
-    ss.setdefault("last_save_time", time.time())
-    
-    # Load previous state if exists
-    load_saved_state()
-    
+    ss.setdefault("players", {})
+
 init()
 
 # ======================================================
-# PLAYER MANAGEMENT
+# DELETE PLAYER
 # ======================================================
 def delete_player(name):
-    ss = st.session_state
-
-    # remove from queue
-    ss.queue = deque([p for p in ss.queue if p[0] != name])
-
-    # remove from courts
-    for cid, teams in ss.courts.items():
+    # Remove from queue
+    st.session_state.queue = deque([p for p in st.session_state.queue if p[0] != name])
+    
+    # Remove from courts
+    for cid, teams in st.session_state.courts.items():
         if not teams:
             continue
         new_teams = []
         for team in teams:
             new_teams.append([p for p in team if p[0] != name])
         if len(new_teams[0]) < 2 or len(new_teams[1]) < 2:
-            ss.courts[cid] = None
-            ss.locked[cid] = False
+            st.session_state.courts[cid] = None
+            st.session_state.locked[cid] = False
         else:
-            ss.courts[cid] = new_teams
+            st.session_state.courts[cid] = new_teams
 
-    # remove stats
-    ss.players.pop(name, None)
-    persist_state()
+    # Remove player stats
+    st.session_state.players.pop(name, None)
 
 # ======================================================
 # MATCH ENGINE
@@ -152,29 +102,24 @@ def take_four_safe():
             for i in sorted(combo, reverse=True):
                 del q[i]
             st.session_state.queue = deque(q)
-            persist_state()
             return group
     return None
 
 def start_match(cid):
-    ss = st.session_state
-    if ss.locked.get(cid):
+    if st.session_state.locked[cid]:
         return
     players = take_four_safe()
     if not players:
         return
-    ss.courts[cid] = make_teams(players)
-    ss.locked[cid] = True
-    ss.scores[cid] = [0, 0]
-    persist_state()
+    st.session_state.courts[cid] = make_teams(players)
+    st.session_state.locked[cid] = True
+    st.session_state.scores[cid] = [0, 0]
 
 def finish_match(cid):
-    ss = st.session_state
-    teams = ss.courts[cid]
-    if not teams:
-        return
-    scoreA, scoreB = ss.scores[cid]
+    teams = st.session_state.courts[cid]
+    scoreA, scoreB = st.session_state.scores[cid]
     teamA, teamB = teams
+
     if scoreA > scoreB:
         winner = "Team A"
         winners, losers = teamA, teamB
@@ -185,16 +130,16 @@ def finish_match(cid):
         winner = "DRAW"
         winners = losers = []
 
-    # update stats
+    # Update stats
     for p in teamA + teamB:
-        ss.players[p[0]]["games"] += 1
+        st.session_state.players[p[0]]["games"] += 1
     for p in winners:
-        ss.players[p[0]]["wins"] += 1
+        st.session_state.players[p[0]]["wins"] += 1
     for p in losers:
-        ss.players[p[0]]["losses"] += 1
+        st.session_state.players[p[0]]["losses"] += 1
 
-    # save history
-    ss.history.append({
+    # Save match history
+    st.session_state.history.append({
         "Court": cid,
         "Team A": " & ".join(p[0] for p in teamA),
         "Team B": " & ".join(p[0] for p in teamB),
@@ -203,15 +148,14 @@ def finish_match(cid):
         "Winner": winner
     })
 
-    # rotate back to queue
+    # Rotate back to queue
     players = teamA + teamB
     random.shuffle(players)
-    ss.queue.extend(players)
+    st.session_state.queue.extend(players)
 
-    ss.courts[cid] = None
-    ss.locked[cid] = False
-    ss.scores[cid] = [0,0]
-    persist_state()
+    st.session_state.courts[cid] = None
+    st.session_state.locked[cid] = False
+    st.session_state.scores[cid] = [0, 0]
 
 def auto_fill():
     if not st.session_state.started:
@@ -241,6 +185,46 @@ def players_csv():
     return pd.DataFrame(rows).to_csv(index=False).encode()
 
 # ======================================================
+# PROFILE SAVE/LOAD
+# ======================================================
+SAVE_DIR = "profiles"
+os.makedirs(SAVE_DIR, exist_ok=True)
+
+def save_profile(name):
+    data = {
+        "queue": list(st.session_state.queue),
+        "courts": st.session_state.courts,
+        "locked": st.session_state.locked,
+        "scores": st.session_state.scores,
+        "history": st.session_state.history,
+        "started": st.session_state.started,
+        "court_count": st.session_state.court_count,
+        "players": st.session_state.players
+    }
+    with open(os.path.join(SAVE_DIR, f"{name}.json"), "w") as f:
+        json.dump(data, f)
+    st.success(f"Profile '{name}' saved!")
+
+def load_profile(name):
+    path = os.path.join(SAVE_DIR, f"{name}.json")
+    if not os.path.exists(path):
+        st.error("Profile not found!")
+        return
+    with open(path, "r") as f:
+        data = json.load(f)
+
+    st.session_state.queue = deque(data["queue"])
+    st.session_state.courts = data["courts"]
+    st.session_state.locked = data["locked"]
+    st.session_state.scores = data["scores"]
+    st.session_state.history = data["history"]
+    st.session_state.started = data["started"]
+    st.session_state.court_count = data["court_count"]
+    st.session_state.players = data["players"]
+
+    st.success(f"Profile '{name}' loaded!")
+
+# ======================================================
 # SIDEBAR
 # ======================================================
 with st.sidebar:
@@ -253,13 +237,9 @@ with st.sidebar:
         name = st.text_input("Name")
         dupr = st.text_input("DUPR ID")
         skill = st.radio("Skill", ["Beginner","Novice","Intermediate"])
-
         if st.form_submit_button("Add Player") and name:
             st.session_state.queue.appendleft((name, skill.upper(), dupr))
-            st.session_state.players.setdefault(
-                name, {"dupr": dupr, "games":0, "wins":0, "losses":0}
-            )
-            persist_state()
+            st.session_state.players.setdefault(name, {"dupr": dupr, "games":0, "wins":0, "losses":0})
 
     # Delete player
     if st.session_state.players:
@@ -269,46 +249,36 @@ with st.sidebar:
             delete_player(remove)
             st.rerun()
 
-    # Start games
-    if st.button("🚀 Start Games"):
+    # Start / Reset
+    col1, col2 = st.columns(2)
+    if col1.button("🚀 Start Games"):
         st.session_state.started = True
         st.session_state.courts = {i:None for i in range(1, st.session_state.court_count+1)}
         st.session_state.locked = {i:False for i in st.session_state.courts}
         st.session_state.scores = {i:[0,0] for i in st.session_state.courts}
-        persist_state()
         st.rerun()
-
-    # Reset
-    if st.button("🔄 Reset"):
+    if col2.button("🔄 Reset"):
         st.session_state.clear()
-        for f in [QUEUE_FILE, PLAYERS_FILE, COURTS_FILE, SCORES_FILE, HISTORY_FILE]:
-            if os.path.exists(f):
-                os.remove(f)
         st.rerun()
 
     st.divider()
 
-    # Manual save
-    if st.button("💾 Save Now"):
-        persist_state()
-        st.success("Data saved!")
-
-    # Load saved data
-    if st.button("📂 Load Saved Data"):
-        load_saved_state()
-        st.success("Saved data loaded!")
-        st.experimental_rerun()
-
-    st.divider()
+    # Download CSV
     st.download_button("📥 Matches CSV", matches_csv(), "matches.csv")
     st.download_button("📥 Players CSV", players_csv(), "players.csv")
 
-# ======================================================
-# AUTO SAVE EVERY 10 SECONDS
-# ======================================================
-if time.time() - st.session_state.last_save_time > 10:
-    persist_state()
-    st.session_state.last_save_time = time.time()
+    st.divider()
+    # Profile Save/Load
+    st.header("💾 Profiles")
+    profile_name = st.text_input("Profile Name")
+    col1, col2 = st.columns(2)
+    if col1.button("Save Profile") and profile_name:
+        save_profile(profile_name)
+    profiles = [f[:-5] for f in os.listdir(SAVE_DIR) if f.endswith(".json")]
+    selected_profile = st.selectbox("Load Profile", [""] + profiles)
+    if col2.button("Load Profile") and selected_profile:
+        load_profile(selected_profile)
+        st.rerun()
 
 # ======================================================
 # MAIN
@@ -340,7 +310,6 @@ for i, cid in enumerate(st.session_state.courts):
         st.markdown(f"### Court {cid}")
 
         teams = st.session_state.courts[cid]
-
         if not teams:
             st.info("Waiting for safe players...")
             st.markdown('</div>', unsafe_allow_html=True)
