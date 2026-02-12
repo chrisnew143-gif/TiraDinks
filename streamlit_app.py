@@ -60,7 +60,7 @@ def init():
     ss.setdefault("courts", {})
     ss.setdefault("locked", {})
     ss.setdefault("scores", {})
-    ss.setdefault("history", [])
+    ss.setdefault("history", [])   # ⭐ matches history restored
     ss.setdefault("started", False)
     ss.setdefault("court_count", 2)
     ss.setdefault("players", {})
@@ -68,9 +68,10 @@ def init():
 init()
 
 # ======================================================
-# DELETE PLAYER FEATURE  ⭐ NEW
+# DELETE PLAYER
 # ======================================================
 def delete_player(name):
+
     # remove from queue
     st.session_state.queue = deque(
         [p for p in st.session_state.queue if p[0] != name]
@@ -80,11 +81,11 @@ def delete_player(name):
     for cid, teams in st.session_state.courts.items():
         if not teams:
             continue
+
         new_teams = []
         for team in teams:
             new_teams.append([p for p in team if p[0] != name])
 
-        # if team < 2 players → clear court
         if len(new_teams[0]) < 2 or len(new_teams[1]) < 2:
             st.session_state.courts[cid] = None
             st.session_state.locked[cid] = False
@@ -92,39 +93,48 @@ def delete_player(name):
             st.session_state.courts[cid] = new_teams
 
     # remove stats
-    if name in st.session_state.players:
-        del st.session_state.players[name]
+    st.session_state.players.pop(name, None)
 
 # ======================================================
 # MATCH ENGINE
 # ======================================================
 def take_four_safe():
     q = list(st.session_state.queue)
+
     if len(q) < 4:
         return None
 
     for combo in combinations(range(len(q)), 4):
         group = [q[i] for i in combo]
+
         if safe_group(group):
             for i in sorted(combo, reverse=True):
                 del q[i]
+
             st.session_state.queue = deque(q)
             return group
+
     return None
+
 
 def start_match(cid):
     if st.session_state.locked[cid]:
         return
+
     players = take_four_safe()
+
     if not players:
         return
+
     st.session_state.courts[cid] = make_teams(players)
     st.session_state.locked[cid] = True
     st.session_state.scores[cid] = [0, 0]
 
+
 def finish_match(cid):
     teams = st.session_state.courts[cid]
     scoreA, scoreB = st.session_state.scores[cid]
+
     teamA, teamB = teams
 
     if scoreA > scoreB:
@@ -137,6 +147,7 @@ def finish_match(cid):
         winner = "DRAW"
         winners = losers = []
 
+    # update stats
     for p in teamA + teamB:
         st.session_state.players[p[0]]["games"] += 1
 
@@ -146,6 +157,7 @@ def finish_match(cid):
     for p in losers:
         st.session_state.players[p[0]]["losses"] += 1
 
+    # ⭐ SAVE MATCH HISTORY (restored)
     st.session_state.history.append({
         "Court": cid,
         "Team A": " & ".join(p[0] for p in teamA),
@@ -155,24 +167,34 @@ def finish_match(cid):
         "Winner": winner
     })
 
-    all_players = teamA + teamB
-    random.shuffle(all_players)
-    st.session_state.queue.extend(all_players)
+    # rotate back to queue
+    players = teamA + teamB
+    random.shuffle(players)
+    st.session_state.queue.extend(players)
 
     st.session_state.courts[cid] = None
     st.session_state.locked[cid] = False
     st.session_state.scores[cid] = [0, 0]
 
+
 def auto_fill():
     if not st.session_state.started:
         return
+
     for cid in st.session_state.courts:
         if st.session_state.courts[cid] is None:
             start_match(cid)
 
 # ======================================================
-# CSV EXPORT
+# CSV EXPORTS ⭐ BOTH BACK
 # ======================================================
+def matches_csv():
+    if not st.session_state.history:
+        return b""
+
+    return pd.DataFrame(st.session_state.history).to_csv(index=False).encode()
+
+
 def players_csv():
     rows = []
     for name, data in st.session_state.players.items():
@@ -183,6 +205,7 @@ def players_csv():
             "Wins": data["wins"],
             "Losses": data["losses"]
         })
+
     return pd.DataFrame(rows).to_csv(index=False).encode()
 
 # ======================================================
@@ -193,47 +216,53 @@ with st.sidebar:
 
     st.session_state.court_count = st.selectbox("Courts", [2,3,4,5,6])
 
-    # ADD PLAYER
+    # Add player
     with st.form("add", clear_on_submit=True):
         name = st.text_input("Name")
         dupr = st.text_input("DUPR ID")
         skill = st.radio("Skill", ["Beginner","Novice","Intermediate"])
+
         if st.form_submit_button("Add Player") and name:
             st.session_state.queue.appendleft((name, skill.upper(), dupr))
+
             st.session_state.players.setdefault(
                 name, {"dupr": dupr, "games":0, "wins":0, "losses":0}
             )
 
-    # DELETE PLAYER  ⭐ RESTORED
+    # Delete player
     if st.session_state.players:
         st.divider()
-        st.subheader("❌ Remove Player")
-        remove_name = st.selectbox("Select player", list(st.session_state.players.keys()))
-        if st.button("Delete Player"):
-            delete_player(remove_name)
+        remove = st.selectbox("❌ Remove Player", list(st.session_state.players.keys()))
+        if st.button("Delete"):
+            delete_player(remove)
             st.rerun()
 
-    # START
+    # Start
     if st.button("🚀 Start Games"):
         st.session_state.started = True
-        st.session_state.courts = {i: None for i in range(1, st.session_state.court_count+1)}
-        st.session_state.locked = {i: False for i in st.session_state.courts}
-        st.session_state.scores = {i: [0,0] for i in st.session_state.courts}
+        st.session_state.courts = {i:None for i in range(1, st.session_state.court_count+1)}
+        st.session_state.locked = {i:False for i in st.session_state.courts}
+        st.session_state.scores = {i:[0,0] for i in st.session_state.courts}
         st.rerun()
 
-    # RESET
+    # Reset
     if st.button("🔄 Reset"):
         st.session_state.clear()
         st.rerun()
 
+    st.divider()
+
+    # ⭐ BOTH DOWNLOAD BUTTONS BACK
+    st.download_button("📥 Matches CSV", matches_csv(), "matches.csv")
     st.download_button("📥 Players CSV", players_csv(), "players.csv")
 
 # ======================================================
-# MAIN UI
+# MAIN
 # ======================================================
 auto_fill()
 
 st.subheader("⏳ Waiting Queue")
+
 if st.session_state.queue:
     st.markdown(
         f'<div class="waiting-box">{", ".join(fmt(p) for p in st.session_state.queue)}</div>',
