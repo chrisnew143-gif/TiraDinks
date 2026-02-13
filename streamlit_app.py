@@ -47,7 +47,7 @@ def superscript_number(n):
 def fmt(p):
     name, skill, dupr = p
     games = st.session_state.players.get(name, {}).get("games", 0)
-    return f"{icon(skill)} {games} {name}"
+    return f"{icon(skill)} {superscript_number(games)} {name}"
 
 def safe_group(players):
     skills = {p[1] for p in players}
