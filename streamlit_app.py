@@ -40,15 +40,22 @@ def icon(skill):
     return {"BEGINNER":"🟢","NOVICE":"🟡","INTERMEDIATE":"🔴"}[skill]
 
 def fmt(p):
+    """Format player as icon + name"""
     return f"{icon(p[1])} {p[0]}"
 
 def safe_group(players):
+    """Check if group is safe: don't mix BEGINNER and INTERMEDIATE"""
     skills = {p[1] for p in players}
     return not ("BEGINNER" in skills and "INTERMEDIATE" in skills)
 
 def make_teams(players):
+    """Shuffle 4 players into two teams of 2"""
     random.shuffle(players)
     return [players[:2], players[2:]]
+
+def sup(n):
+    """Convert number → superscript"""
+    return str(n).translate(str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹"))
 
 # ======================================================
 # SESSION INIT
@@ -287,27 +294,18 @@ with st.sidebar:
 auto_fill()
 
 # ======================================================
-# WAITING QUEUE (WITH STACK POSITION NUMBERS)
+# WAITING QUEUE (WITH GAMES PLAYED)
 # ======================================================
 st.subheader("⏳ Waiting Queue")
 
-def sup(n):
-    """Convert number → superscript"""
-    return str(n).translate(str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹"))
-
 if st.session_state.queue:
-
-    q = list(st.session_state.queue)
-
-    # newest (appendleft) = 0
-    # oldest gets highest number
-    total = len(q) - 1
 
     formatted_players = []
 
-    for i, p in enumerate(q):
-        position = total - i
-        formatted_players.append(f"{icon(p[1])} {sup(position)} {p[0]}")
+    for p in st.session_state.queue:
+        name, skill, dupr = p
+        games_played = st.session_state.players.get(name, {}).get("games", 0)
+        formatted_players.append(f"{icon(skill)} {sup(games_played)} {name}")
 
     st.markdown(
         f'<div class="waiting-box">{", ".join(formatted_players)}</div>',
@@ -320,9 +318,8 @@ else:
 if not st.session_state.started:
     st.stop()
 
-
 # ======================================================
-# COURTS (FULL REWRITE)
+# COURTS
 # ======================================================
 st.divider()
 st.subheader("🏟 Live Courts")
