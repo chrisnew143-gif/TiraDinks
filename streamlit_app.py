@@ -34,6 +34,15 @@ st.title("🎾 Pickleball Auto Stack")
 st.caption("First come • first play • fair rotation • preferred court supported")
 
 # ======================================================
+# WAITING QUEUE
+# ======================================================
+st.subheader("⏳ Waiting Queue")
+
+queue_text = ", ".join(fmt(p) for p in st.session_state.queue)
+
+st.text(queue_text)
+
+# ======================================================
 # HELPERS
 # ======================================================
 def icon(skill):
