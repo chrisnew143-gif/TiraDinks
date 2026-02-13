@@ -38,18 +38,14 @@ st.caption("First come • first play • fair rotation")
 # ======================================================
 def icon(skill):
     return {"BEGINNER":"🟢","NOVICE":"🟡","INTERMEDIATE":"🔴"}[skill]
-
+    
+ # Helper to convert number to superscript
 def superscript_number(n):
     sup_map = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
     return str(n).translate(sup_map)
 
 def fmt(p):
-    # p is (name, skill, dupr)
-    if len(p) == 3:
-        name, skill, dupr = p
-    else:
-        # fallback if data is malformed
-        name, skill, dupr = p[0], "BEGINNER", ""
+    name, skill, dupr = p
     games = st.session_state.players.get(name, {}).get("games", 0)
     return f"{icon(skill)} {superscript_number(games)} {name}"
 
@@ -241,32 +237,16 @@ def delete_profile(name):
 # ======================================================
 with st.sidebar:
     st.header("⚙ Setup")
-    st.session_state.court_count = st.selectbox(
-        "Courts", [2,3,4,5,6], index=st.session_state.court_count-2
-    )
+    st.session_state.court_count = st.selectbox("Courts", [2,3,4,5,6], index=st.session_state.court_count-2)
 
-    # Add player with optional court assignment
+    # Add player
     with st.form("add", clear_on_submit=True):
         name = st.text_input("Name")
         dupr = st.text_input("DUPR ID")
         skill = st.radio("Skill", ["Beginner","Novice","Intermediate"])
-        court_num = st.selectbox("Assign Court (optional)", ["None"] + list(range(1,7)))
         if st.form_submit_button("Add Player") and name:
-            player = (name, skill.upper(), dupr)
+            st.session_state.queue.appendleft((name, skill.upper(), dupr))
             st.session_state.players.setdefault(name, {"dupr": dupr, "games":0, "wins":0, "losses":0})
-            if court_num != "None":
-                if st.session_state.courts.get(court_num) is None:
-                    st.session_state.courts[court_num] = [[player], []]
-                else:
-                    if len(st.session_state.courts[court_num][0]) < 2:
-                        st.session_state.courts[court_num][0].append(player)
-                    elif len(st.session_state.courts[court_num][1]) < 2:
-                        st.session_state.courts[court_num][1].append(player)
-                    else:
-                        st.session_state.queue.appendleft(player)
-            else:
-                st.session_state.queue.appendleft(player)
-            st.rerun()
 
     # Delete player
     if st.session_state.players:
@@ -313,11 +293,12 @@ with st.sidebar:
 # ======================================================
 auto_fill()
 
-# Waiting Queue display (fixed!)
 st.subheader("⏳ Waiting Queue")
 if st.session_state.queue:
-    queue_text = ", ".join(fmt(p) for p in st.session_state.queue)
-    st.text(queue_text)
+    st.markdown(
+        f'<div class="waiting-box">{", ".join(fmt(p) for p in st.session_state.queue)}</div>',
+        unsafe_allow_html=True
+    )
 else:
     st.success("No players waiting 🎉")
 
@@ -358,7 +339,9 @@ for i, cid in enumerate(st.session_state.courts):
             finish_match(cid)
             st.rerun()
 
-        # SWAP PLAYER
+        # -------------------------
+        # SWAP PLAYER WITH WAITING QUEUE
+        # -------------------------
         all_players = st.session_state.queue
         flat_court = teams[0] + teams[1]
         st.markdown("**Swap Player**")
