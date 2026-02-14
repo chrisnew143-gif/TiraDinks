@@ -9,7 +9,7 @@ import os
 # ======================================================
 # PAGE CONFIG
 # ======================================================
-st.set_page_config(page_title="Pickleball Auto Stack", page_icon="🎾", layout="wide")
+st.set_page_config(page_title="TiraDinks Pickleball Auto Stack", page_icon="🏓", layout="wide")
 
 st.markdown("""
 <style>
@@ -30,7 +30,7 @@ a[href*="github.com/streamlit"]{display:none!important;}
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🎾 Pickleball Auto Stack")
+st.title("🏓TiraDinks Pickleball Auto Stack")
 st.caption("First come • first play • fair rotation")
 
 # ======================================================
