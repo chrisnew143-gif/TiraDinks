@@ -40,15 +40,22 @@ def icon(skill):
     return {"BEGINNER":"🟢","NOVICE":"🟡","INTERMEDIATE":"🔴"}[skill]
 
 def fmt(p):
+    """Format player as icon + name"""
     return f"{icon(p[1])} {p[0]}"
 
 def safe_group(players):
+    """Check if group is safe: don't mix BEGINNER and INTERMEDIATE"""
     skills = {p[1] for p in players}
     return not ("BEGINNER" in skills and "INTERMEDIATE" in skills)
 
 def make_teams(players):
+    """Shuffle 4 players into two teams of 2"""
     random.shuffle(players)
     return [players[:2], players[2:]]
+
+def sup(n):
+    """Convert number → superscript"""
+    return str(n).translate(str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹"))
 
 # ======================================================
 # SESSION INIT
@@ -286,21 +293,33 @@ with st.sidebar:
 # ======================================================
 auto_fill()
 
+# ======================================================
+# WAITING QUEUE (WITH GAMES PLAYED)
+# ======================================================
 st.subheader("⏳ Waiting Queue")
+
 if st.session_state.queue:
+
+    formatted_players = []
+
+    for p in st.session_state.queue:
+        name, skill, dupr = p
+        games_played = st.session_state.players.get(name, {}).get("games", 0)
+        formatted_players.append(f"{icon(skill)} {sup(games_played)} {name}")
+
     st.markdown(
-        f'<div class="waiting-box">{", ".join(fmt(p) for p in st.session_state.queue)}</div>',
+        f'<div class="waiting-box">{", ".join(formatted_players)}</div>',
         unsafe_allow_html=True
     )
+
 else:
     st.success("No players waiting 🎉")
 
 if not st.session_state.started:
     st.stop()
 
-
 # ======================================================
-# COURTS (FULL REWRITE)
+# COURTS
 # ======================================================
 st.divider()
 st.subheader("🏟 Live Courts")
@@ -361,4 +380,3 @@ for i, cid in enumerate(st.session_state.courts):
             st.rerun()
 
         st.markdown('</div>', unsafe_allow_html=True)
-		
