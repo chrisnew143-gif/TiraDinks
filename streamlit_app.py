@@ -40,6 +40,54 @@ st.markdown("""
 footer {visibility:hidden;}
 a[href*="github.com/streamlit"]{display:none!important;}
 
+/* 🔥 FORCE ALL TEXT TO BLACK */
+html, body, [class*="css"]  {
+    color: black !important;
+}
+
+/* Titles */
+h1, h2, h3, h4, h5, h6 {
+    color: black !important;
+}
+
+/* Sidebar text */
+section[data-testid="stSidebar"] * {
+    color: black !important;
+}
+
+/* Labels */
+label {
+    color: black !important;
+}
+
+/* Buttons */
+button {
+    color: black !important;
+}
+
+/* Court cards */
+.court-card{
+    padding:14px;
+    border-radius:12px;
+    background:#f4f6fa;
+    margin-bottom:12px;
+    color: black !important;
+}
+
+.waiting-box{
+    background:#fff3cd;
+    padding:10px;
+    border-radius:10px;
+    color: black !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<style>
+footer {visibility:hidden;}
+a[href*="github.com/streamlit"]{display:none!important;}
+
 .court-card{
     padding:14px;
     border-radius:12px;
