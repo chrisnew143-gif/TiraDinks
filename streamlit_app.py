@@ -40,29 +40,29 @@ st.markdown("""
 footer {visibility:hidden;}
 a[href*="github.com/streamlit"]{display:none!important;}
 
-/* 🔥 FORCE ALL TEXT TO BLACK */
+/* 🎨 Premium Dark Slate Text */
 html, body, [class*="css"]  {
-    color: black !important;
+    color: #1E293B !important;
 }
 
 /* Titles */
 h1, h2, h3, h4, h5, h6 {
-    color: black !important;
+    color: #1E293B !important;
 }
 
 /* Sidebar text */
 section[data-testid="stSidebar"] * {
-    color: black !important;
+    color: #1E293B !important;
 }
 
 /* Labels */
 label {
-    color: black !important;
+    color: #1E293B !important;
 }
 
 /* Buttons */
 button {
-    color: black !important;
+    color: #1E293B !important;
 }
 
 /* Court cards */
@@ -71,17 +71,19 @@ button {
     border-radius:12px;
     background:#f4f6fa;
     margin-bottom:12px;
-    color: black !important;
+    color: #1E293B !important;
 }
 
+/* Waiting box */
 .waiting-box{
     background:#fff3cd;
     padding:10px;
     border-radius:10px;
-    color: black !important;
+    color: #1E293B !important;
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 st.markdown("""
 <style>
