@@ -80,3 +80,26 @@ elif st.session_state.page == "registerclub":
 
     st.markdown("## 🚧 Under Construction 🚧")
     st.info("feature coming soon!")
+
+# ✅ BACKGROUND IMAGE FUNCTION ADDED
+def set_background(image_file):
+    with open(image_file, "rb") as img:
+        encoded = base64.b64encode(img.read()).decode()
+
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/jpg;base64,{encoded}");
+            background-size: contain;   /* ✅ Show full image */
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-color: #000000;  /* Optional: fills empty space */
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+set_background("TDphoto.jpg")
