@@ -223,7 +223,8 @@ def save_profile(name):
         "history": st.session_state.history,
         "started": st.session_state.started,
         "court_count": st.session_state.court_count,
-        "players": st.session_state.players
+        "players": st.session_state.players,
+        "match_start_time": {k: v.strftime("%Y-%m-%d %H:%M:%S") for k, v in st.session_state.match_start_time.items()}
     }
     with open(os.path.join(SAVE_DIR, f"{name}.json"), "w") as f:
         json.dump(data, f)
@@ -244,6 +245,8 @@ def load_profile(name):
     st.session_state.started = data["started"]
     st.session_state.court_count = data["court_count"]
     st.session_state.players = data["players"]
+    # Restore match_start_time as datetime objects
+    st.session_state.match_start_time = {int(k): datetime.strptime(v, "%Y-%m-%d %H:%M:%S") for k, v in data.get("match_start_time", {}).items()}
     st.success(f"Profile '{name}' loaded!")
 
 def delete_profile(name):
