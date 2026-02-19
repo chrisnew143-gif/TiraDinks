@@ -95,20 +95,22 @@ def delete_player(name):
     st.session_state.players.pop(name, None)
 
 # ======================================================
-# MATCH ENGINE
+# MATCH ENGINE (FIXED)
 # ======================================================
 def take_four_safe():
     q = list(st.session_state.queue)
     if len(q) < 4:
         return None
-    for combo in combinations(range(len(q)), 4):
-        group = [q[i] for i in combo]
-        if safe_group(group):
-            for i in sorted(combo, reverse=True):
-                del q[i]
-            st.session_state.queue = deque(q)
-            return group
+    # Take first 4 in order and check safe
+    group = q[:4]
+    if safe_group(group):
+        st.session_state.queue = deque(q[4:])
+        return group
     return None
+
+def make_teams(players):
+    # Keep first-come-first-play order
+    return [players[:2], players[2:]]
 
 def start_match(cid):
     if st.session_state.locked[cid]:
@@ -119,10 +121,7 @@ def start_match(cid):
     st.session_state.courts[cid] = make_teams(players)
     st.session_state.locked[cid] = True
     st.session_state.scores[cid] = [0, 0]
-    
     st.session_state.match_start_time[cid] = datetime.now()
-
-
 
 def finish_match(cid):
     teams = st.session_state.courts[cid]
@@ -173,20 +172,34 @@ def finish_match(cid):
     # Clear start time
     st.session_state.match_start_time.pop(cid, None)
 
+    # Return players to queue in FCFS order (remove shuffle)
     players = teamA + teamB
-    random.shuffle(players)
     st.session_state.queue.extend(players)
 
     st.session_state.courts[cid] = None
     st.session_state.locked[cid] = False
     st.session_state.scores[cid] = [0, 0]
 
-def auto_fill():
-    if not st.session_state.started:
+# ===================== WINNER WINNER BUTTON LOGIC =====================
+def winner_winner(cid):
+    teams = st.session_state.courts[cid]
+    scoreA, scoreB = st.session_state.scores[cid]
+
+    if scoreA > scoreB:
+        winners, losers = teams[0], teams[1]
+    elif scoreB > scoreA:
+        winners, losers = teams[1], teams[0]
+    else:
+        st.warning("Match is a draw, cannot use Winner Winner")
         return
-    for cid in st.session_state.courts:
-        if st.session_state.courts[cid] is None:
-            start_match(cid)
+
+    # Rotate losers back to queue
+    st.session_state.queue.extend(losers)
+    # Keep winners on court
+    st.session_state.courts[cid] = [winners[:2], winners[2:]] if len(winners) > 2 else [winners, []]
+    st.session_state.scores[cid] = [0, 0]
+    st.rerun()
+
 
 # ======================================================
 # CSV EXPORTS
