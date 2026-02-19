@@ -7,6 +7,12 @@ st.write("Welcome to the Auto Stack Application!")
 
 st.divider()
 
-# Button to Open AutoStack page
+# Open Play Button
 if st.button("🎾 Open Play Stacking", use_container_width=True):
     st.switch_page("pages/AutoStack.py")
+
+st.divider()
+
+# DUPR Match Button
+if st.button("🏆 DUPR Match", use_container_width=True):
+    st.switch_page("pages/DUPRMatch.py")
