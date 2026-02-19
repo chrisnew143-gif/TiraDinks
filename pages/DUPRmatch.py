@@ -48,6 +48,7 @@ if uploaded_file is not None:
 
     if st.button("🚀 Generate Matches", use_container_width=True):
         matches_output = []
+        court_assignments_output = []
 
         # Group players by bracket
         bracket_groups = {}
@@ -71,14 +72,24 @@ if uploaded_file is not None:
                 court_idx = idx % NUM_COURTS  # Round-robin assignment
                 courts_players[court_idx].append(player)
 
-            # Remove courts with less than 4 players (optional)
-            courts_players = [court for court in courts_players if len(court) >= 4]
+            # Save court assignments for download
+            for court_number, court_players in enumerate(courts_players, start=1):
+                for p in court_players:
+                    court_assignments_output.append({
+                        "Bracket": bracket,
+                        "Court": court_number,
+                        "Player Name": p["Name"],
+                        "DUPR_ID": p["DUPR_ID"],
+                        "Rating": p["Rating"]
+                    })
 
             # ============================
             # Generate rounds
             # ============================
             for round_number in range(1, ROUNDS + 1):
                 for court_number, court_players in enumerate(courts_players, start=1):
+                    if len(court_players) < 4:
+                        continue  # Skip if not enough players for a match
                     random.shuffle(court_players)
 
                     # Create balanced teams
@@ -120,16 +131,31 @@ if uploaded_file is not None:
             st.dataframe(matches_df, use_container_width=True)
 
             # ============================
-            # DOWNLOAD EXCEL
+            # DOWNLOAD MATCHES EXCEL
             # ============================
-            output = BytesIO()
-            matches_df.to_excel(output, index=False, engine="openpyxl")
-            output.seek(0)
+            output_matches = BytesIO()
+            matches_df.to_excel(output_matches, index=False, engine="openpyxl")
+            output_matches.seek(0)
             st.download_button(
                 label="📥 Download Matches Excel",
-                data=output,
+                data=output_matches,
                 file_name="DUPR_Matches.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
+
+            # ============================
+            # DOWNLOAD COURT ASSIGNMENTS EXCEL
+            # ============================
+            court_assignments_df = pd.DataFrame(court_assignments_output)
+            output_courts = BytesIO()
+            court_assignments_df.to_excel(output_courts, index=False, engine="openpyxl")
+            output_courts.seek(0)
+            st.download_button(
+                label="📥 Download Court Assignments Excel",
+                data=output_courts,
+                file_name="DUPR_Court_Assignments.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+
         else:
             st.warning("Not enough players to generate matches in the selected brackets.")
