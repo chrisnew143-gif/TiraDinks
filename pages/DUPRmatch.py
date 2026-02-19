@@ -17,10 +17,10 @@ st.write("Upload your Excel file with columns: Name, DUPR_ID, Rating")
 uploaded_file = st.file_uploader("Upload Players Excel File", type=["xlsx", "csv"])
 
 # ============================
-# CONFIG
+# CONFIG INPUTS
 # ============================
 BRACKETS = [
-    (2.0, 2.5),  # NEW bracket added
+    (2.0, 2.5),
     (2.5, 3.0),
     (3.0, 3.5),
     (3.5, 4.0)
@@ -29,9 +29,8 @@ BRACKETS = [
 ROUNDS = st.number_input("Number of Rounds", min_value=1, max_value=10, value=2)
 NUM_COURTS = st.number_input("Number of Courts", min_value=1, max_value=10, value=2)
 
-
 # ============================
-# GENERATE BUTTON
+# GENERATE MATCHES
 # ============================
 if uploaded_file is not None:
     # Read file
@@ -40,7 +39,7 @@ if uploaded_file is not None:
     else:
         df = pd.read_excel(uploaded_file, engine="openpyxl")
 
-    # Validate columns
+    # Validate required columns
     required_columns = ["Name", "DUPR_ID", "Rating"]
     for col in required_columns:
         if col not in df.columns:
@@ -48,40 +47,44 @@ if uploaded_file is not None:
             st.stop()
 
     if st.button("🚀 Generate Matches", use_container_width=True):
-
         matches_output = []
 
-        # Group players by rating bracket
+        # Group players by bracket
         bracket_groups = {}
         for low, high in BRACKETS:
             bracket_name = f"{low}-{high}"
             group = df[(df["Rating"] >= low) & (df["Rating"] < high)]
             bracket_groups[bracket_name] = group.to_dict("records")
 
-        # Generate Matches
+        # Generate matches for each bracket
         for bracket, players in bracket_groups.items():
 
             if len(players) < 4:
-                continue
+                continue  # Skip brackets with less than 4 players
 
             partner_history = defaultdict(set)
 
+            # ============================
+            # Assign players to fixed courts
+            # ============================
+            courts_players = []
+            for i in range(0, len(players), 4):
+                group = players[i:i+4]
+                if len(group) < 4:
+                    continue
+                courts_players.append(group)
+
+            # ============================
+            # Generate rounds
+            # ============================
             for round_number in range(1, ROUNDS + 1):
-                random.shuffle(players)
-                court_number = 1
+                for court_number, court_players in enumerate(courts_players, start=1):
+                    random.shuffle(court_players)
 
-                # Split players into courts
-                players_per_court = max(4, len(players) // NUM_COURTS)
-                for i in range(0, len(players), players_per_court):
-                    court_players = players[i:i+players_per_court]
-
-                    if len(court_players) < 4:
-                        continue
-
-                    # Shuffle and assign teams
+                    # Create balanced teams
                     court_players_sorted = sorted(court_players, key=lambda x: x["Rating"])
                     team_a = [court_players_sorted[0], court_players_sorted[-1]]
-                    team_b = [court_players_sorted[1], court_players_sorted[-2]]
+                    team_b = [court_players_sorted[1], court_players_sorted[2]]
 
                     # Avoid repeat partners
                     def repeated(team):
@@ -98,7 +101,7 @@ if uploaded_file is not None:
                     partner_history[team_b[0]["Name"]].add(team_b[1]["Name"])
                     partner_history[team_b[1]["Name"]].add(team_b[0]["Name"])
 
-                    # Append match
+                    # Append match to output
                     matches_output.append({
                         "Bracket": bracket,
                         "Round": round_number,
@@ -111,14 +114,14 @@ if uploaded_file is not None:
                         "Team B Avg Rating": round((team_b[0]["Rating"] + team_b[1]["Rating"]) / 2, 2),
                     })
 
-                    court_number += 1
-
         if matches_output:
             matches_df = pd.DataFrame(matches_output)
             st.success("✅ Matches Generated Successfully!")
             st.dataframe(matches_df, use_container_width=True)
 
-            # Download Excel
+            # ============================
+            # DOWNLOAD EXCEL
+            # ============================
             output = BytesIO()
             matches_df.to_excel(output, index=False, engine="openpyxl")
             output.seek(0)
