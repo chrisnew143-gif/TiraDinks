@@ -272,151 +272,92 @@ def delete_profile(name):
         st.error("Profile not found!")
 
 # ======================================================
-# SIDEBAR (COMPACT VERSION)
+# SIDEBAR (ORGANIZED WITH DROPDOWNS)
 # ======================================================
 with st.sidebar:
 
-    # ================== STYLE ==================
-    st.markdown("""
-    <style>
-    section[data-testid="stSidebar"] * {
-        font-size:13px !important;
-    }
-
-    .sidebar-title {
-        font-size:16px;
-        font-weight:600;
-        margin-bottom:8px;
-    }
-
-    .small-gap {
-        margin-top:6px;
-        margin-bottom:6px;
-    }
-
-    .small-btn button {
-        font-size:12px !important;
-        padding:4px 8px !important;
-        border-radius:6px !important;
-    }
-
-    div[role="radiogroup"] > label {
-        margin-right:10px !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<div class="sidebar-title">⚙ Setup</div>', unsafe_allow_html=True)
+    st.markdown('<h4 style="margin-bottom:10px;">⚙ Setup</h4>', unsafe_allow_html=True)
 
     # ================== COURTS ==================
-    st.session_state.court_count = st.selectbox(
-        "Courts",
-        [2,3,4,5,6],
-        index=st.session_state.court_count-2
-    )
-
-    st.markdown("---")
-
-    # ================== ADD PLAYER ==================
-    with st.form("add", clear_on_submit=True):
-
-        name = st.text_input("Name")
-        dupr = st.text_input("DUPR ID")
-
-        skill = st.radio(
-            "Skill",
-            ["Beginner","Novice","Intermediate"],
-            horizontal=True  # 🔥 makes it compact
+    with st.expander("🏟 Courts", expanded=True):
+        st.session_state.court_count = st.selectbox(
+            "Number of Courts",
+            [2,3,4,5,6],
+            index=st.session_state.court_count-2
         )
 
-        st.markdown('<div class="small-btn">', unsafe_allow_html=True)
-        submitted = st.form_submit_button("Add Player")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        if submitted and name:
-            st.session_state.queue.appendleft((name, skill.upper(), dupr))
-            st.session_state.players.setdefault(
-                name,
-                {"dupr": dupr, "games":0, "wins":0, "losses":0}
+    # ================== ADD PLAYER ==================
+    with st.expander("➕ Add Player", expanded=False):
+        with st.form("add", clear_on_submit=True):
+            name = st.text_input("Name")
+            dupr = st.text_input("DUPR ID")
+            skill = st.radio(
+                "Skill",
+                ["Beginner","Novice","Intermediate"],
+                horizontal=True
             )
+            submitted = st.form_submit_button("Add Player")
+            if submitted and name:
+                st.session_state.queue.appendleft((name, skill.upper(), dupr))
+                st.session_state.players.setdefault(
+                    name,
+                    {"dupr": dupr, "games":0, "wins":0, "losses":0}
+                )
 
     # ================== REMOVE PLAYER ==================
     if st.session_state.players:
-        st.markdown("---")
-
-        remove = st.selectbox(
-            "❌ Remove Player",
-            list(st.session_state.players.keys())
-        )
-
-        st.markdown('<div class="small-btn">', unsafe_allow_html=True)
-        if st.button("Delete"):
-            delete_player(remove)
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.expander("❌ Remove Player", expanded=False):
+            remove = st.selectbox(
+                "Select Player",
+                list(st.session_state.players.keys())
+            )
+            if st.button("Delete"):
+                delete_player(remove)
+                st.rerun()
 
     # ================== START / RESET ==================
-    st.markdown("---")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.markdown('<div class="small-btn">', unsafe_allow_html=True)
-        if st.button("Start"):
-            st.session_state.started = True
-            st.session_state.courts = {
-                i:None for i in range(1, st.session_state.court_count+1)
-            }
-            st.session_state.locked = {
-                i:False for i in st.session_state.courts
-            }
-            st.session_state.scores = {
-                i:[0,0] for i in st.session_state.courts
-            }
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with col2:
-        st.markdown('<div class="small-btn">', unsafe_allow_html=True)
-        if st.button("Reset"):
-            st.session_state.clear()
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+    with st.expander("🚀 Start / Reset", expanded=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Start Games"):
+                st.session_state.started = True
+                st.session_state.courts = {
+                    i:None for i in range(1, st.session_state.court_count+1)
+                }
+                st.session_state.locked = {
+                    i:False for i in st.session_state.courts
+                }
+                st.session_state.scores = {
+                    i:[0,0] for i in st.session_state.courts
+                }
+                st.rerun()
+        with col2:
+            if st.button("Reset"):
+                st.session_state.clear()
+                st.rerun()
 
     # ================== CSV DOWNLOAD ==================
-    st.markdown("---")
-
-    st.download_button("Matches CSV", matches_csv(), "matches.csv")
-    st.download_button("Players CSV", players_csv(), "players.csv")
+    with st.expander("📥 Export CSV", expanded=False):
+        st.download_button("Matches CSV", matches_csv(), "matches.csv")
+        st.download_button("Players CSV", players_csv(), "players.csv")
 
     # ================== PROFILES ==================
-    st.markdown("---")
-    st.markdown('<div class="sidebar-title">💾 Profiles</div>', unsafe_allow_html=True)
+    with st.expander("💾 Profiles", expanded=False):
+        profile_name = st.text_input("Profile Name")
 
-    profile_name = st.text_input("Profile Name")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Save") and profile_name:
+                save_profile(profile_name)
+        profiles = [f[:-5] for f in os.listdir(SAVE_DIR) if f.endswith(".json")]
+        selected_profile = st.selectbox("Select Profile", [""] + profiles)
+        with col2:
+            if st.button("Load") and selected_profile:
+                load_profile(selected_profile)
+                st.rerun()
+        if st.button("Delete Profile") and selected_profile:
+            delete_profile(selected_profile)
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.markdown('<div class="small-btn">', unsafe_allow_html=True)
-        if st.button("Save") and profile_name:
-            save_profile(profile_name)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    profiles = [f[:-5] for f in os.listdir(SAVE_DIR) if f.endswith(".json")]
-    selected_profile = st.selectbox("Select Profile", [""] + profiles)
-
-    with col2:
-        st.markdown('<div class="small-btn">', unsafe_allow_html=True)
-        if st.button("Load") and selected_profile:
-            load_profile(selected_profile)
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="small-btn">', unsafe_allow_html=True)
-    if st.button("Delete Profile") and selected_profile:
-        delete_profile(selected_profile)
-    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ======================================================
