@@ -410,7 +410,7 @@ if not st.session_state.started:
     st_autorefresh(interval=1000, key="live_timer")
 
 # ======================================================
-# COURTS (LIVE) - STYLED
+# COURTS (LIVE) - COLLAPSIBLE CONTROLS
 # ======================================================
 st.divider()
 st.subheader("🏟 Live Courts")
@@ -422,28 +422,29 @@ st_autorefresh(interval=1000, key="live_timer")
 st.markdown("""
 <style>
 .court-card {
-    padding:12px;
-    border-radius:12px;
+    padding:10px;
+    border-radius:10px;
     background:#f4f6fa;
-    margin-bottom:12px;
+    margin-bottom:10px;
 }
 
 .court-info {
-    font-size:14px;  /* small uniform font for names and team */
+    font-size:14px;  /* small font for names and teams */
 }
 
 .control-btn button, .control-btn input[type="number"] {
-    font-size:16px !important;  /* bigger buttons & inputs */
-    padding:6px 12px !important;
-    margin-top:4px;
-    margin-bottom:4px;
-    border-radius:8px !important;
+    font-size:14px !important;  /* smaller than before */
+    padding:4px 8px !important;
+    margin-top:2px;
+    margin-bottom:2px;
+    border-radius:6px !important;
 }
 
-.swap-section {
-    margin-top:6px;
-    margin-bottom:6px;
+.swap-section select, .swap-section button {
+    font-size:14px !important;
+    padding:4px 6px !important;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -479,56 +480,56 @@ for i, cid in enumerate(st.session_state.courts):
         st.markdown('<div class="court-info"><b>Team B</b><br>' + "<br>".join(fmt(p) for p in teams[1]) + '</div>', unsafe_allow_html=True)
 
         # -------------------------
-        # CONTROL BUTTONS (BIGGER)
+        # COLLAPSIBLE CONTROLS: SCORE & BUTTONS
         # -------------------------
-        st.markdown('<div class="control-btn">', unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        if c1.button("🔀 Shuffle Teams", key=f"shuffle_{cid}"):
-            players = teams[0] + teams[1]
-            random.shuffle(players)
-            st.session_state.courts[cid] = [players[:2], players[2:]]
-            st.rerun()
-
-        if c2.button("🔁 Rematch", key=f"rematch_{cid}"):
-            st.session_state.scores[cid] = [0, 0]
-            st.rerun()
-
-        a = st.number_input("Score A", 0, key=f"A_{cid}")
-        b = st.number_input("Score B", 0, key=f"B_{cid}")
-
-        if st.button("✅ Submit Score", key=f"submit_{cid}"):
-            st.session_state.scores[cid] = [a, b]
-            finish_match(cid)
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        # -------------------------
-        # SWAP PLAYER (BIGGER)
-        # -------------------------
-        st.markdown('<div class="swap-section"><b>🔁 Swap Player</b></div>', unsafe_allow_html=True)
-
-        flat_court = teams[0] + teams[1]
-        queue_list = list(st.session_state.queue)
-
-        if flat_court and queue_list:
-            swap_from_court = st.selectbox(
-                "Player OUT (from court)",
-                [p[0] for p in flat_court],
-                key=f"swap_out_{cid}"
-            )
-
-            swap_from_queue = st.selectbox(
-                "Player IN (from waiting)",
-                [p[0] for p in queue_list],
-                key=f"swap_in_{cid}"
-            )
-
-            if st.button("🔄 Swap Players", key=f"swap_btn_{cid}"):
-                court_index = next(i for i, p in enumerate(flat_court) if p[0] == swap_from_court)
-                queue_index = next(i for i, p in enumerate(queue_list) if p[0] == swap_from_queue)
-                flat_court[court_index], queue_list[queue_index] = queue_list[queue_index], flat_court[court_index]
-                st.session_state.courts[cid] = [flat_court[:2], flat_court[2:]]
-                st.session_state.queue = deque(queue_list)
+        with st.expander("🎯 Score & Controls", expanded=False):
+            st.markdown('<div class="control-btn">', unsafe_allow_html=True)
+            c1, c2 = st.columns(2)
+            if c1.button("🔀 Shuffle Teams", key=f"shuffle_{cid}"):
+                players = teams[0] + teams[1]
+                random.shuffle(players)
+                st.session_state.courts[cid] = [players[:2], players[2:]]
                 st.rerun()
+
+            if c2.button("🔁 Rematch", key=f"rematch_{cid}"):
+                st.session_state.scores[cid] = [0, 0]
+                st.rerun()
+
+            a = st.number_input("Score A", 0, key=f"A_{cid}")
+            b = st.number_input("Score B", 0, key=f"B_{cid}")
+
+            if st.button("✅ Submit Score", key=f"submit_{cid}"):
+                st.session_state.scores[cid] = [a, b]
+                finish_match(cid)
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # -------------------------
+        # COLLAPSIBLE SWAP PLAYER
+        # -------------------------
+        with st.expander("🔁 Swap Player", expanded=False):
+            flat_court = teams[0] + teams[1]
+            queue_list = list(st.session_state.queue)
+
+            if flat_court and queue_list:
+                swap_from_court = st.selectbox(
+                    "Player OUT (from court)",
+                    [p[0] for p in flat_court],
+                    key=f"swap_out_{cid}"
+                )
+
+                swap_from_queue = st.selectbox(
+                    "Player IN (from waiting)",
+                    [p[0] for p in queue_list],
+                    key=f"swap_in_{cid}"
+                )
+
+                if st.button("🔄 Swap Players", key=f"swap_btn_{cid}"):
+                    court_index = next(i for i, p in enumerate(flat_court) if p[0] == swap_from_court)
+                    queue_index = next(i for i, p in enumerate(queue_list) if p[0] == swap_from_queue)
+                    flat_court[court_index], queue_list[queue_index] = queue_list[queue_index], flat_court[court_index]
+                    st.session_state.courts[cid] = [flat_court[:2], flat_court[2:]]
+                    st.session_state.queue = deque(queue_list)
+                    st.rerun()
 
         st.markdown('</div>', unsafe_allow_html=True)
