@@ -16,3 +16,5 @@ st.divider()
 # DUPR Match Button
 if st.button("🏆 DUPR Match", use_container_width=True):
     st.switch_page("pages/DUPRMatch.py")
+
+st.divider()
