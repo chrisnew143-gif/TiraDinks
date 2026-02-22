@@ -2,8 +2,8 @@ import streamlit as st
 
 st.set_page_config(page_title="Pickleball Manager", layout="centered")
 
-st.title("🏠 Pickleball Manager")
-st.write("Welcome to the Auto Stack Application!")
+st.title("🏠 TiraDinks Official")
+st.write("Welcome to the TiraDinks Club!")
 
 st.divider()
 
