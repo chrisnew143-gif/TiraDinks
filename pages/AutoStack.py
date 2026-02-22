@@ -12,7 +12,7 @@ from datetime import datetime
 # ======================================================
 # PAGE CONFIG
 # ======================================================
-st.set_page_config(page_title="Pickleball Auto Stack", page_icon="🎾", layout="wide")
+st.set_page_config(page_title="Pickleball Auto Stack TiraDinks Official", page_icon="🎾", layout="wide")
 
 st.markdown("""
 <style>
@@ -33,8 +33,8 @@ a[href*="github.com/streamlit"]{display:none!important;}
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🎾 Pickleball Auto Stack")
-st.caption("First come • first play • fair rotation")
+st.title("🎾 Pickleball Auto Stack TiraDinks Official")
+st.caption("WE CAMED WE DINKED!")
 
 # ======================================================
 # HELPERS
@@ -98,14 +98,25 @@ def delete_player(name):
 # MATCH ENGINE (FULL FIXED)
 # ======================================================
 def take_four_safe():
-    """Take the first 4 players from the queue in order if safe."""
+    """
+    Find the first safe combination of 4 players 
+    while preserving first-come priority as much as possible.
+    """
     q = list(st.session_state.queue)
+
     if len(q) < 4:
         return None
-    group = q[:4]
-    if safe_group(group):
-        st.session_state.queue = deque(q[4:])
-        return group
+
+    # Try all 4-player combinations in queue order
+    for combo in combinations(q, 4):
+        if safe_group(combo):
+            # Remove selected players from queue
+            new_queue = q.copy()
+            for p in combo:
+                new_queue.remove(p)
+            st.session_state.queue = deque(new_queue)
+            return list(combo)
+
     return None
 
 def make_teams(players):
@@ -329,7 +340,7 @@ with st.sidebar:
             )
             submitted = st.form_submit_button("Add Player")
             if submitted and name:
-                st.session_state.queue.appendleft((name, skill.upper(), dupr))
+                st.session_state.queue.append((name, skill.upper(), dupr))
                 st.session_state.players.setdefault(
                     name,
                     {"dupr": dupr, "games":0, "wins":0, "losses":0}
