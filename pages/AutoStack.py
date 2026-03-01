@@ -184,6 +184,71 @@ def auto_fill():
             start_match(cid)
 
 # ======================================================
+# CSV EXPORTS
+# ======================================================
+def matches_csv():
+    if not st.session_state.history:
+        return b""
+    return pd.DataFrame(st.session_state.history).to_csv(index=False).encode()
+
+def players_csv():
+    rows = []
+    for name, data in st.session_state.players.items():
+        rows.append({
+            "Player Name": name,
+            "DUPR ID": data["dupr"],
+            "Games Played": data["games"],
+            "Wins": data["wins"],
+            "Losses": data["losses"]
+        })
+    return pd.DataFrame(rows).to_csv(index=False).encode()
+
+# ======================================================
+# PROFILE SAVE / LOAD / DELETE
+# ======================================================
+SAVE_DIR = "profiles"
+os.makedirs(SAVE_DIR, exist_ok=True)
+
+def save_profile(name):
+    data = {
+        "queue": list(st.session_state.queue),
+        "courts": st.session_state.courts,
+        "locked": st.session_state.locked,
+        "scores": st.session_state.scores,
+        "history": st.session_state.history,
+        "started": st.session_state.started,
+        "court_count": st.session_state.court_count,
+        "players": st.session_state.players
+    }
+    with open(os.path.join(SAVE_DIR, f"{name}.json"), "w") as f:
+        json.dump(data, f)
+    st.success(f"Profile '{name}' saved!")
+
+def load_profile(name):
+    path = os.path.join(SAVE_DIR, f"{name}.json")
+    if not os.path.exists(path):
+        st.error("Profile not found!")
+        return
+    with open(path, "r") as f:
+        data = json.load(f)
+
+    st.session_state.courts = {int(k): v for k, v in data["courts"].items()}
+    st.session_state.locked = {int(k): v for k, v in data["locked"].items()}
+    st.session_state.scores = {int(k): v for k, v in data["scores"].items()}
+    st.session_state.queue = deque(data["queue"])
+    st.session_state.history = data["history"]
+    st.session_state.started = data["started"]
+    st.session_state.court_count = data["court_count"]
+    st.session_state.players = data["players"]
+
+def delete_profile(name):
+    path = os.path.join(SAVE_DIR, f"{name}.json")
+    if os.path.exists(path):
+        os.remove(path)
+        st.success(f"Profile '{name}' deleted!")
+        st.rerun()
+
+# ======================================================
 # SIDEBAR
 # ======================================================
 with st.sidebar:
@@ -223,6 +288,13 @@ with st.sidebar:
                         "dupr":dupr,"games":0,"wins":0,"losses":0
                     }
 
+    # Delete Player
+    if st.session_state.players:
+        remove = st.selectbox("Delete Player", list(st.session_state.players.keys()))
+        if st.button("Remove Player"):
+            delete_player(remove)
+            st.rerun()
+
     st.markdown("---")
 
     col1, col2 = st.columns(2)
@@ -236,6 +308,29 @@ with st.sidebar:
     if col2.button("Reset"):
         st.session_state.clear()
         st.rerun()
+
+    st.markdown("---")
+
+    st.download_button("Download Matches CSV", matches_csv(), "matches.csv")
+    st.download_button("Download Players CSV", players_csv(), "players.csv")
+
+    st.markdown("---")
+
+    profile_name = st.text_input("Profile Name")
+
+    col1, col2 = st.columns(2)
+    if col1.button("Save Profile") and profile_name:
+        save_profile(profile_name)
+
+    profiles = [f[:-5] for f in os.listdir(SAVE_DIR) if f.endswith(".json")]
+    selected_profile = st.selectbox("Select Profile", [""] + profiles)
+
+    if col2.button("Load Profile") and selected_profile:
+        load_profile(selected_profile)
+        st.rerun()
+
+    if st.button("Delete Profile") and selected_profile:
+        delete_profile(selected_profile)
 
 # ======================================================
 # MAIN
