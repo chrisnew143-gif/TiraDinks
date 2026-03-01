@@ -184,62 +184,58 @@ def auto_fill():
             start_match(cid)
 
 # ======================================================
-# CSV EXPORTS
+# SIDEBAR
 # ======================================================
-def matches_csv():
-    if not st.session_state.history:
-        return b""
-    return pd.DataFrame(st.session_state.history).to_csv(index=False).encode()
+with st.sidebar:
 
-def players_csv():
-    rows = []
-    for name, data in st.session_state.players.items():
-        rows.append({
-            "Player Name": name,
-            "DUPR ID": data["dupr"],
-            "Games Played": data["games"],
-            "Wins": data["wins"],
-            "Losses": data["losses"]
-        })
-    return pd.DataFrame(rows).to_csv(index=False).encode()
+    st.markdown("### ⚙ Setup")
 
-# ======================================================
-# PROFILE SAVE / LOAD
-# ======================================================
-SAVE_DIR = "profiles"
-os.makedirs(SAVE_DIR, exist_ok=True)
+    st.session_state.court_count = st.selectbox(
+        "Number of Courts",
+        [2,3,4,5,6],
+        index=st.session_state.court_count-2
+    )
 
-def save_profile(name):
-    data = {
-        "queue": list(st.session_state.queue),
-        "courts": st.session_state.courts,
-        "locked": st.session_state.locked,
-        "scores": st.session_state.scores,
-        "history": st.session_state.history,
-        "started": st.session_state.started,
-        "court_count": st.session_state.court_count,
-        "players": st.session_state.players
-    }
-    with open(os.path.join(SAVE_DIR, f"{name}.json"), "w") as f:
-        json.dump(data, f)
-    st.success(f"Profile '{name}' saved!")
+    st.markdown("---")
 
-def load_profile(name):
-    path = os.path.join(SAVE_DIR, f"{name}.json")
-    if not os.path.exists(path):
-        st.error("Profile not found!")
-        return
-    with open(path, "r") as f:
-        data = json.load(f)
+    # Add Player
+    try:
+        registered_players = supabase.table("players").select("*").execute().data
+    except:
+        registered_players = []
 
-    st.session_state.courts = {int(k): v for k, v in data["courts"].items()}
-    st.session_state.locked = {int(k): v for k, v in data["locked"].items()}
-    st.session_state.scores = {int(k): v for k, v in data["scores"].items()}
-    st.session_state.queue = deque(data["queue"])
-    st.session_state.history = data["history"]
-    st.session_state.started = data["started"]
-    st.session_state.court_count = data["court_count"]
-    st.session_state.players = data["players"]
+    player_names = [p.get("name","") for p in registered_players if "name" in p]
+
+    with st.form("add_player_form", clear_on_submit=True):
+        selected_name = st.selectbox("Select Registered Player", [""] + player_names)
+        submitted = st.form_submit_button("Add Player")
+
+        if submitted and selected_name:
+            if selected_name in st.session_state.players:
+                st.warning("Player already added.")
+            else:
+                player_data = next((p for p in registered_players if p.get("name")==selected_name), None)
+                if player_data:
+                    dupr = player_data.get("dupr","N/A")
+                    skill = player_data.get("skill","BEGINNER").upper()
+                    st.session_state.queue.append((selected_name, skill, dupr))
+                    st.session_state.players[selected_name] = {
+                        "dupr":dupr,"games":0,"wins":0,"losses":0
+                    }
+
+    st.markdown("---")
+
+    col1, col2 = st.columns(2)
+    if col1.button("Start"):
+        st.session_state.started = True
+        st.session_state.courts = {i:None for i in range(1, st.session_state.court_count+1)}
+        st.session_state.locked = {i:False for i in st.session_state.courts}
+        st.session_state.scores = {i:[0,0] for i in st.session_state.courts}
+        st.rerun()
+
+    if col2.button("Reset"):
+        st.session_state.clear()
+        st.rerun()
 
 # ======================================================
 # MAIN
