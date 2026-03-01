@@ -62,6 +62,10 @@ def safe_group(players):
     skills = {p[1] for p in players}
     return not ("BEGINNER" in skills and "INTERMEDIATE" in skills)
 
+def make_teams(players):
+    random.shuffle(players)
+    return [players[:2], players[2:]]
+
 # ======================================================
 # SESSION INIT
 # ======================================================
@@ -83,17 +87,20 @@ init()
 # ======================================================
 def delete_player(name):
     st.session_state.queue = deque([p for p in st.session_state.queue if p[0] != name])
+
     for cid, teams in st.session_state.courts.items():
         if not teams:
             continue
         new_teams = []
         for team in teams:
             new_teams.append([p for p in team if p[0] != name])
+
         if len(new_teams[0]) < 2 or len(new_teams[1]) < 2:
             st.session_state.courts[cid] = None
             st.session_state.locked[cid] = False
         else:
             st.session_state.courts[cid] = new_teams
+
     st.session_state.players.pop(name, None)
 
 # ======================================================
@@ -104,34 +111,30 @@ def take_four_safe():
     if len(q) < 4:
         return None
 
-    for combo in combinations(q, 4):
-        if safe_group(combo):
-            new_queue = q.copy()
-            for p in combo:
-                new_queue.remove(p)
-            st.session_state.queue = deque(new_queue)
-            return list(combo)
+    for combo in combinations(range(len(q)), 4):
+        group = [q[i] for i in combo]
+        if safe_group(group):
+            for i in sorted(combo, reverse=True):
+                del q[i]
+            st.session_state.queue = deque(q)
+            return group
     return None
 
-def make_teams(players):
-    return [players[:2], players[2:]]
-
 def start_match(cid):
-    if st.session_state.locked.get(cid, False):
+    if st.session_state.locked.get(cid):
         return
+
     players = take_four_safe()
     if not players:
         return
+
     st.session_state.courts[cid] = make_teams(players)
     st.session_state.locked[cid] = True
     st.session_state.scores[cid] = [0, 0]
 
 def finish_match(cid):
-    teams = st.session_state.courts.get(cid)
-    if not teams:
-        return
-
-    scoreA, scoreB = st.session_state.scores.get(cid, [0, 0])
+    teams = st.session_state.courts[cid]
+    scoreA, scoreB = st.session_state.scores[cid]
     teamA, teamB = teams
 
     if scoreA > scoreB:
@@ -146,11 +149,14 @@ def finish_match(cid):
 
     for p in teamA + teamB:
         st.session_state.players[p[0]]["games"] += 1
+
     for p in winners:
         st.session_state.players[p[0]]["wins"] += 1
+
     for p in losers:
         st.session_state.players[p[0]]["losses"] += 1
 
+    # Supabase update
     try:
         for p in teamA + teamB:
             name = p[0]
@@ -159,8 +165,8 @@ def finish_match(cid):
                 "games": stats["games"],
                 "wins": stats["wins"]
             }).eq("name", name).execute()
-    except Exception as e:
-        st.error(f"Supabase update failed: {e}")
+    except:
+        pass
 
     st.session_state.history.append({
         "Court": cid,
@@ -171,37 +177,20 @@ def finish_match(cid):
         "Winner": winner
     })
 
+    players = teamA + teamB
+    random.shuffle(players)
+    st.session_state.queue.extend(players)
+
     st.session_state.courts[cid] = None
     st.session_state.locked[cid] = False
     st.session_state.scores[cid] = [0, 0]
-    st.session_state.queue.extend(teamA + teamB)
 
 def auto_fill():
     if not st.session_state.started:
         return
-    for cid in range(1, st.session_state.court_count + 1):
-        if st.session_state.courts.get(cid) is None:
+    for cid in st.session_state.courts:
+        if st.session_state.courts[cid] is None:
             start_match(cid)
-
-# ======================================================
-# CSV EXPORTS
-# ======================================================
-def matches_csv():
-    if not st.session_state.history:
-        return b""
-    return pd.DataFrame(st.session_state.history).to_csv(index=False).encode()
-
-def players_csv():
-    rows = []
-    for name, data in st.session_state.players.items():
-        rows.append({
-            "Player Name": name,
-            "DUPR ID": data["dupr"],
-            "Games Played": data["games"],
-            "Wins": data["wins"],
-            "Losses": data["losses"]
-        })
-    return pd.DataFrame(rows).to_csv(index=False).encode()
 
 # ======================================================
 # PROFILE SAVE / LOAD / DELETE
@@ -222,103 +211,88 @@ def save_profile(name):
     }
     with open(os.path.join(SAVE_DIR, f"{name}.json"), "w") as f:
         json.dump(data, f)
-    st.success(f"Profile '{name}' saved!")
+    st.success("Profile saved!")
 
 def load_profile(name):
-    path = os.path.join(SAVE_DIR, f"{name}.json")
-    if not os.path.exists(path):
-        st.error("Profile not found!")
-        return
-    with open(path, "r") as f:
+    with open(os.path.join(SAVE_DIR, f"{name}.json"), "r") as f:
         data = json.load(f)
 
-    st.session_state.courts = {int(k): v for k, v in data["courts"].items()}
-    st.session_state.locked = {int(k): v for k, v in data["locked"].items()}
-    st.session_state.scores = {int(k): v for k, v in data["scores"].items()}
     st.session_state.queue = deque(data["queue"])
+    st.session_state.courts = {int(k): v for k,v in data["courts"].items()}
+    st.session_state.locked = {int(k): v for k,v in data["locked"].items()}
+    st.session_state.scores = {int(k): v for k,v in data["scores"].items()}
     st.session_state.history = data["history"]
     st.session_state.started = data["started"]
     st.session_state.court_count = data["court_count"]
     st.session_state.players = data["players"]
 
 def delete_profile(name):
-    path = os.path.join(SAVE_DIR, f"{name}.json")
-    if os.path.exists(path):
-        os.remove(path)
-        st.success(f"Profile '{name}' deleted!")
-        st.rerun()
+    os.remove(os.path.join(SAVE_DIR, f"{name}.json"))
+    st.success("Profile deleted!")
+    st.rerun()
 
 # ======================================================
 # SIDEBAR
 # ======================================================
 with st.sidebar:
 
-    st.markdown("### ⚙ Setup")
+    st.header("⚙ Setup")
 
     st.session_state.court_count = st.selectbox(
-        "Number of Courts",
+        "Courts",
         [2,3,4,5,6],
         index=st.session_state.court_count-2
     )
 
-    st.markdown("---")
-
-    # Add Player
+    # Add Player from Supabase
     try:
-        registered_players = supabase.table("players").select("*").execute().data
+        registered = supabase.table("players").select("*").execute().data
     except:
-        registered_players = []
+        registered = []
 
-    player_names = [p.get("name","") for p in registered_players if "name" in p]
+    names = [p["name"] for p in registered]
 
-    with st.form("add_player_form", clear_on_submit=True):
-        selected_name = st.selectbox("Select Registered Player", [""] + player_names)
-        submitted = st.form_submit_button("Add Player")
-
-        if submitted and selected_name:
-            if selected_name in st.session_state.players:
-                st.warning("Player already added.")
-            else:
-                player_data = next((p for p in registered_players if p.get("name")==selected_name), None)
-                if player_data:
-                    dupr = player_data.get("dupr","N/A")
-                    skill = player_data.get("skill","BEGINNER").upper()
-                    st.session_state.queue.append((selected_name, skill, dupr))
-                    st.session_state.players[selected_name] = {
-                        "dupr":dupr,"games":0,"wins":0,"losses":0
-                    }
+    with st.form("add_form", clear_on_submit=True):
+        selected = st.selectbox("Select Player", [""] + names)
+        if st.form_submit_button("Add Player") and selected:
+            if selected not in st.session_state.players:
+                data = next(p for p in registered if p["name"] == selected)
+                st.session_state.queue.appendleft((selected, data["skill"].upper(), data["dupr"]))
+                st.session_state.players[selected] = {
+                    "dupr": data["dupr"],
+                    "games":0,
+                    "wins":0,
+                    "losses":0
+                }
 
     # Delete Player
     if st.session_state.players:
-        remove = st.selectbox("Delete Player", list(st.session_state.players.keys()))
-        if st.button("Remove Player"):
+        st.divider()
+        remove = st.selectbox("❌ Remove Player", list(st.session_state.players.keys()))
+        if st.button("Delete Player"):
             delete_player(remove)
             st.rerun()
 
-    st.markdown("---")
+    st.divider()
 
     col1, col2 = st.columns(2)
-    if col1.button("Start"):
+    if col1.button("🚀 Start"):
         st.session_state.started = True
         st.session_state.courts = {i:None for i in range(1, st.session_state.court_count+1)}
         st.session_state.locked = {i:False for i in st.session_state.courts}
         st.session_state.scores = {i:[0,0] for i in st.session_state.courts}
         st.rerun()
 
-    if col2.button("Reset"):
+    if col2.button("🔄 Reset"):
         st.session_state.clear()
         st.rerun()
 
-    st.markdown("---")
+    st.divider()
 
-    st.download_button("Download Matches CSV", matches_csv(), "matches.csv")
-    st.download_button("Download Players CSV", players_csv(), "players.csv")
-
-    st.markdown("---")
-
+    # Profiles
     profile_name = st.text_input("Profile Name")
-
     col1, col2 = st.columns(2)
+
     if col1.button("Save Profile") and profile_name:
         save_profile(profile_name)
 
@@ -355,9 +329,11 @@ st.subheader("🏟 Live Courts")
 cols = st.columns(2)
 
 for i, cid in enumerate(st.session_state.courts):
+
     with cols[i % 2]:
+
         st.markdown('<div class="court-card">', unsafe_allow_html=True)
-        st.markdown(f'<b>Court {cid}</b>', unsafe_allow_html=True)
+        st.markdown(f"### Court {cid}")
 
         teams = st.session_state.courts[cid]
 
@@ -366,15 +342,62 @@ for i, cid in enumerate(st.session_state.courts):
             st.markdown('</div>', unsafe_allow_html=True)
             continue
 
-        st.markdown('<b>Team A</b><br>' + "<br>".join(fmt(p) for p in teams[0]), unsafe_allow_html=True)
-        st.markdown('<b>Team B</b><br>' + "<br>".join(fmt(p) for p in teams[1]), unsafe_allow_html=True)
+        st.write("**Team A**  \n" + " & ".join(fmt(p) for p in teams[0]))
+        st.write("**Team B**  \n" + " & ".join(fmt(p) for p in teams[1]))
+
+        c1, c2 = st.columns(2)
+
+        if c1.button("🔀 Shuffle Teams", key=f"shuffle_{cid}"):
+            players = teams[0] + teams[1]
+            random.shuffle(players)
+            st.session_state.courts[cid] = [players[:2], players[2:]]
+            st.rerun()
+
+        if c2.button("🔁 Rematch", key=f"rematch_{cid}"):
+            st.session_state.scores[cid] = [0,0]
+            st.rerun()
+
+        st.divider()
 
         a = st.number_input("Score A", 0, key=f"A_{cid}")
         b = st.number_input("Score B", 0, key=f"B_{cid}")
 
-        if st.button("Submit Score", key=f"submit_{cid}"):
-            st.session_state.scores[cid] = [a, b]
+        if st.button("✅ Submit Score", key=f"submit_{cid}"):
+            st.session_state.scores[cid] = [a,b]
             finish_match(cid)
             st.rerun()
 
         st.markdown('</div>', unsafe_allow_html=True)
+
+        # Swap Section
+        st.divider()
+        st.markdown("**🔁 Swap Player**")
+
+        flat = teams[0] + teams[1]
+        queue_list = list(st.session_state.queue)
+
+        if flat and queue_list:
+
+            out_player = st.selectbox(
+                "Player OUT",
+                [p[0] for p in flat],
+                key=f"swap_out_{cid}"
+            )
+
+            in_player = st.selectbox(
+                "Player IN",
+                [p[0] for p in queue_list],
+                key=f"swap_in_{cid}"
+            )
+
+            if st.button("🔄 Swap", key=f"swap_btn_{cid}"):
+
+                ci = next(i for i,p in enumerate(flat) if p[0]==out_player)
+                qi = next(i for i,p in enumerate(queue_list) if p[0]==in_player)
+
+                flat[ci], queue_list[qi] = queue_list[qi], flat[ci]
+
+                st.session_state.courts[cid] = [flat[:2], flat[2:]]
+                st.session_state.queue = deque(queue_list)
+
+                st.rerun()
