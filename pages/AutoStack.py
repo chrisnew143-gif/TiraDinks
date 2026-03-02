@@ -239,10 +239,10 @@ with st.sidebar:
     st.header("⚙ Setup")
 
     st.session_state.court_count = st.selectbox(
-        "Courts",
-        [2,3,4,5,6],
-        index=st.session_state.court_count-2
-    )
+    "Courts",
+    [1, 2, 3, 4, 5, 6],
+    index=st.session_state.court_count - 1
+)
 
     # Add Player from Supabase
     try:
