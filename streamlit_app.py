@@ -15,9 +15,8 @@ background-repeat: no-repeat;
 background-attachment: fixed;
 }
 
-[data-testid="stSidebarNav"] {
-display: none;
-}
+/* hide default sidebar pages */
+[data-testid="stSidebarNav"] {display:none;}
 </style>
 """
 st.markdown(page_bg_img, unsafe_allow_html=True)
@@ -42,7 +41,7 @@ if "logged_in" not in st.session_state:
 
 
 # =========================
-# LOGIN FUNCTION
+# LOGIN PAGE
 # =========================
 def login():
 
@@ -65,7 +64,6 @@ def login():
             st.session_state.user = username
             st.session_state.role = users[username]["role"]
 
-            st.success("Login successful!")
             st.rerun()
 
         else:
@@ -73,7 +71,7 @@ def login():
 
 
 # =========================
-# LOGOUT FUNCTION
+# LOGOUT
 # =========================
 def logout():
     st.session_state.logged_in = False
@@ -83,14 +81,15 @@ def logout():
 
 
 # =========================
-# MAIN APPLICATION
+# MAIN APP
 # =========================
 def main_app():
 
     st.sidebar.title("🏓 TiraDinks Menu")
     st.sidebar.write(f"Logged in as **{st.session_state.user}**")
 
-    st.sidebar.button("Logout", on_click=logout)
+    if st.sidebar.button("Logout"):
+        logout()
 
     # =========================
     # ORGANIZER MENU
@@ -108,39 +107,30 @@ def main_app():
             ]
         )
 
+        if page == "AutoStack":
+            st.switch_page("pages/AutoStack.py")
+
+        if page == "DUPRmatch":
+            st.switch_page("pages/DUPRmatch.py")
+
+        if page == "Player Profile":
+            st.switch_page("pages/Player Profile.py")
+
+        if page == "Players Leader Board":
+            st.switch_page("pages/Players Leader Board.py")
+
+        if page == "Schedules":
+            st.switch_page("pages/Schedules.py")
+
+
     # =========================
     # MEMBER MENU
     # =========================
     else:
 
-        page = "Players Leader Board"
-
         st.sidebar.success("Players Leader Board")
 
-
-    # =========================
-    # PAGES
-    # =========================
-
-    if page == "AutoStack":
-        st.title("🔄 AutoStack")
-        st.write("Organizer tool for stacking players.")
-
-    elif page == "DUPRmatch":
-        st.title("🎾 DUPR Match")
-        st.write("Manage DUPR matches here.")
-
-    elif page == "Player Profile":
-        st.title("👤 Player Profile")
-        st.write("Player stats and profile page.")
-
-    elif page == "Players Leader Board":
-        st.title("🏆 Players Leader Board")
-        st.write("Club rankings and statistics.")
-
-    elif page == "Schedules":
-        st.title("📅 Schedules")
-        st.write("Game schedules and bookings.")
+        st.switch_page("pages/Players Leader Board.py")
 
 
 # =========================
