@@ -1,11 +1,11 @@
 import streamlit as st
 
-st.set_page_config(page_title="TiraDinks", layout="centered")
+st.set_page_config(page_title="Pickleball Manager", layout="centered")
 
 # =========================
 # BACKGROUND IMAGE
 # =========================
-page_bg = """
+page_bg_img = """
 <style>
 [data-testid="stAppViewContainer"] {
 background-image: url("TDphoto.jpg");
@@ -14,17 +14,21 @@ background-position: center;
 background-repeat: no-repeat;
 background-attachment: fixed;
 }
+
+[data-testid="stSidebarNav"] {
+display: none;
+}
 </style>
 """
-st.markdown(page_bg, unsafe_allow_html=True)
+st.markdown(page_bg_img, unsafe_allow_html=True)
 
 
 # =========================
-# HARDCODED USERS
+# USERS (HARDCODED)
 # =========================
 users = {
     "tiradinks1": {"password": "123456", "role": "organizer"},
-    "tiradinks2": {"password": "123456", "role": "member"},
+    "tiradinks2": {"password": "123456", "role": "member"}
 }
 
 
@@ -33,16 +37,12 @@ users = {
 # =========================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-
-if "role" not in st.session_state:
     st.session_state.role = None
-
-if "user" not in st.session_state:
     st.session_state.user = None
 
 
 # =========================
-# LOGIN PAGE
+# LOGIN FUNCTION
 # =========================
 def login():
 
@@ -62,10 +62,10 @@ def login():
         if username in users and users[username]["password"] == password:
 
             st.session_state.logged_in = True
-            st.session_state.role = users[username]["role"]
             st.session_state.user = username
+            st.session_state.role = users[username]["role"]
 
-            st.success("Login successful")
+            st.success("Login successful!")
             st.rerun()
 
         else:
@@ -73,27 +73,80 @@ def login():
 
 
 # =========================
-# MAIN PAGE AFTER LOGIN
+# LOGOUT FUNCTION
 # =========================
-def home():
+def logout():
+    st.session_state.logged_in = False
+    st.session_state.role = None
+    st.session_state.user = None
+    st.rerun()
 
-    st.sidebar.title("🏓 TiraDinks")
+
+# =========================
+# MAIN APPLICATION
+# =========================
+def main_app():
+
+    st.sidebar.title("🏓 TiraDinks Menu")
     st.sidebar.write(f"Logged in as **{st.session_state.user}**")
 
-    if st.sidebar.button("Logout"):
-        st.session_state.logged_in = False
-        st.session_state.role = None
-        st.session_state.user = None
-        st.rerun()
+    st.sidebar.button("Logout", on_click=logout)
 
-    st.title("🏓 Welcome to TiraDinks")
-    st.write("Use the sidebar to navigate the application.")
+    # =========================
+    # ORGANIZER MENU
+    # =========================
+    if st.session_state.role == "organizer":
+
+        page = st.sidebar.selectbox(
+            "Navigate",
+            [
+                "AutoStack",
+                "DUPRmatch",
+                "Player Profile",
+                "Players Leader Board",
+                "Schedules"
+            ]
+        )
+
+    # =========================
+    # MEMBER MENU
+    # =========================
+    else:
+
+        page = "Players Leader Board"
+
+        st.sidebar.success("Players Leader Board")
+
+
+    # =========================
+    # PAGES
+    # =========================
+
+    if page == "AutoStack":
+        st.title("🔄 AutoStack")
+        st.write("Organizer tool for stacking players.")
+
+    elif page == "DUPRmatch":
+        st.title("🎾 DUPR Match")
+        st.write("Manage DUPR matches here.")
+
+    elif page == "Player Profile":
+        st.title("👤 Player Profile")
+        st.write("Player stats and profile page.")
+
+    elif page == "Players Leader Board":
+        st.title("🏆 Players Leader Board")
+        st.write("Club rankings and statistics.")
+
+    elif page == "Schedules":
+        st.title("📅 Schedules")
+        st.write("Game schedules and bookings.")
 
 
 # =========================
-# ROUTING
+# PAGE ROUTING
 # =========================
 if not st.session_state.logged_in:
     login()
 else:
-    home()
+    main_app()
