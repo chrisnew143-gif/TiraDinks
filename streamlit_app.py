@@ -22,15 +22,13 @@ display: none;
 """
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
-
 # =========================
-# USERS (HARDCODED)
+# USERS
 # =========================
 users = {
     "tiradinks1": {"password": "123456", "role": "organizer"},
     "tiradinks2": {"password": "123456", "role": "member"}
 }
-
 
 # =========================
 # SESSION STATE
@@ -40,9 +38,8 @@ if "logged_in" not in st.session_state:
     st.session_state.role = None
     st.session_state.user = None
 
-
 # =========================
-# LOGIN FUNCTION
+# LOGIN
 # =========================
 def login():
 
@@ -66,14 +63,19 @@ def login():
             st.session_state.role = users[username]["role"]
 
             st.success("Login successful!")
-            st.rerun()
+
+            # REDIRECT BASED ON ROLE
+            if st.session_state.role == "member":
+                st.switch_page("pages/Players Leader Board.py")
+
+            else:
+                st.rerun()
 
         else:
             st.error("Invalid username or password")
 
-
 # =========================
-# LOGOUT FUNCTION
+# LOGOUT
 # =========================
 def logout():
     st.session_state.logged_in = False
@@ -81,9 +83,8 @@ def logout():
     st.session_state.user = None
     st.rerun()
 
-
 # =========================
-# MAIN APPLICATION
+# MAIN APP
 # =========================
 def main_app():
 
@@ -92,9 +93,7 @@ def main_app():
 
     st.sidebar.button("Logout", on_click=logout)
 
-    # =========================
     # ORGANIZER MENU
-    # =========================
     if st.session_state.role == "organizer":
 
         page = st.sidebar.selectbox(
@@ -108,43 +107,31 @@ def main_app():
             ]
         )
 
-    # =========================
-    # MEMBER MENU
-    # =========================
-    else:
+        if page == "AutoStack":
+            st.switch_page("pages/AutoStack.py")
 
-        page = "Players Leader Board"
+        if page == "DUPRmatch":
+            st.switch_page("pages/DUPRmatch.py")
+
+        if page == "Player Profile":
+            st.switch_page("pages/Player Profile.py")
+
+        if page == "Players Leader Board":
+            st.switch_page("pages/Players Leader Board.py")
+
+        if page == "Schedules":
+            st.switch_page("pages/Schedules.py")
+
+    # MEMBER MENU
+    else:
 
         st.sidebar.success("Players Leader Board")
 
-
-    # =========================
-    # PAGES
-    # =========================
-
-    if page == "AutoStack":
-        st.title("🔄 AutoStack")
-        st.write("Organizer tool for stacking players.")
-
-    elif page == "DUPRmatch":
-        st.title("🎾 DUPR Match")
-        st.write("Manage DUPR matches here.")
-
-    elif page == "Player Profile":
-        st.title("👤 Player Profile")
-        st.write("Player stats and profile page.")
-
-    elif page == "Players Leader Board":
-        st.title("🏆 Players Leader Board")
-        st.write("Club rankings and statistics.")
-
-    elif page == "Schedules":
-        st.title("📅 Schedules")
-        st.write("Game schedules and bookings.")
+        st.switch_page("pages/Players Leader Board.py")
 
 
 # =========================
-# PAGE ROUTING
+# ROUTING
 # =========================
 if not st.session_state.logged_in:
     login()
