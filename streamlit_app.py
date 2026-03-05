@@ -81,7 +81,7 @@ def main_app():
     st.sidebar.button("Logout", on_click=logout)
 
     # =========================
-    # PAGE LIST
+    # PAGES MAPPING
     # =========================
     pages = {
         "AutoStack": "pages.AutoStack",
@@ -96,18 +96,21 @@ def main_app():
     # =========================
     if st.session_state.role == "organizer":
         page_choice = st.sidebar.selectbox("Navigate", list(pages.keys()))
-    else:  # member only sees Players Leader Board
+    else:  # members only see Players Leader Board
         page_choice = "Players Leader Board"
         st.sidebar.success("Players Leader Board")
 
     # =========================
     # DYNAMIC PAGE IMPORT
     # =========================
-    page_module = importlib.import_module(pages[page_choice])
-    if hasattr(page_module, "app"):
-        page_module.app()  # call the app() function inside each page file
-    else:
-        st.error(f"{page_choice}.py does not have an `app()` function.")
+    try:
+        page_module = importlib.import_module(pages[page_choice])
+        if hasattr(page_module, "app"):
+            page_module.app()  # call the app() function inside the page file
+        else:
+            st.error(f"{page_choice}.py does not have an `app()` function.")
+    except ModuleNotFoundError:
+        st.error(f"Module for {page_choice} not found. Check file names in pages/ folder.")
 
 # =========================
 # PAGE ROUTING
