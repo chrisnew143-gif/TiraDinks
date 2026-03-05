@@ -22,7 +22,6 @@ display: none;
 """
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
-
 # =========================
 # USERS (HARDCODED)
 # =========================
@@ -30,7 +29,6 @@ users = {
     "tiradinks1": {"password": "123456", "role": "organizer"},
     "tiradinks2": {"password": "123456", "role": "member"}
 }
-
 
 # =========================
 # SESSION STATE
@@ -40,13 +38,11 @@ if "logged_in" not in st.session_state:
     st.session_state.role = None
     st.session_state.user = None
 
-
 # =========================
 # LOGIN FUNCTION
 # =========================
 def login():
-
-    col1, col2, col3 = st.columns([1,2,1])
+    col1, col2, col3 = st.columns([1, 2, 1])
 
     with col2:
         st.image("TDphoto.jpg", width=300)
@@ -58,19 +54,14 @@ def login():
     password = st.text_input("Password", type="password")
 
     if st.button("Sign In"):
-
         if username in users and users[username]["password"] == password:
-
             st.session_state.logged_in = True
             st.session_state.user = username
             st.session_state.role = users[username]["role"]
-
             st.success("Login successful!")
-            st.rerun()
-
+            st.experimental_rerun()
         else:
             st.error("Invalid username or password")
-
 
 # =========================
 # LOGOUT FUNCTION
@@ -79,49 +70,30 @@ def logout():
     st.session_state.logged_in = False
     st.session_state.role = None
     st.session_state.user = None
-    st.rerun()
-
+    st.experimental_rerun()
 
 # =========================
 # MAIN APPLICATION
 # =========================
 def main_app():
-
-    st.sidebar.title("🏓 TiraDinks Menu")
     st.sidebar.write(f"Logged in as **{st.session_state.user}**")
-
     st.sidebar.button("Logout", on_click=logout)
 
-    # =========================
-    # ORGANIZER MENU
-    # =========================
+    # Organizer sees full menu
     if st.session_state.role == "organizer":
-
         page = st.sidebar.selectbox(
-            "Navigate",
-            [
-                "AutoStack",
-                "DUPRmatch",
-                "Player Profile",
-                "Players Leader Board",
-                "Schedules"
-            ]
+            "🏓 Navigate",
+            ["AutoStack", "DUPRmatch", "Player Profile", "Players Leader Board", "Schedules"]
         )
 
-    # =========================
-    # MEMBER MENU
-    # =========================
+    # Member sees only Players Leader Board
     else:
-
         page = "Players Leader Board"
-
-        st.sidebar.success("Players Leader Board")
-
+        st.sidebar.success("🏆 Players Leader Board")
 
     # =========================
     # PAGES
     # =========================
-
     if page == "AutoStack":
         st.title("🔄 AutoStack")
         st.write("Organizer tool for stacking players.")
@@ -141,7 +113,6 @@ def main_app():
     elif page == "Schedules":
         st.title("📅 Schedules")
         st.write("Game schedules and bookings.")
-
 
 # =========================
 # PAGE ROUTING
