@@ -1,4 +1,5 @@
 import streamlit as st
+import importlib
 
 st.set_page_config(page_title="Pickleball Manager", layout="centered")
 
@@ -42,8 +43,7 @@ if "logged_in" not in st.session_state:
 # LOGIN FUNCTION
 # =========================
 def login():
-    col1, col2, col3 = st.columns([1, 2, 1])
-
+    col1, col2, col3 = st.columns([1,2,1])
     with col2:
         st.image("TDphoto.jpg", width=300)
 
@@ -59,7 +59,7 @@ def login():
             st.session_state.user = username
             st.session_state.role = users[username]["role"]
             st.success("Login successful!")
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("Invalid username or password")
 
@@ -70,49 +70,44 @@ def logout():
     st.session_state.logged_in = False
     st.session_state.role = None
     st.session_state.user = None
-    st.experimental_rerun()
+    st.rerun()
 
 # =========================
 # MAIN APPLICATION
 # =========================
 def main_app():
+    st.sidebar.title("🏓 TiraDinks Menu")
     st.sidebar.write(f"Logged in as **{st.session_state.user}**")
     st.sidebar.button("Logout", on_click=logout)
 
-    # Organizer sees full menu
+    # =========================
+    # PAGE LIST
+    # =========================
+    pages = {
+        "AutoStack": "pages.AutoStack",
+        "DUPRmatch": "pages.DUPRmatch",
+        "Player Profile": "pages.Player_Profile",
+        "Players Leader Board": "pages.Players_Leader_Board",
+        "Schedules": "pages.Schedules"
+    }
+
+    # =========================
+    # ROLE BASED MENU
+    # =========================
     if st.session_state.role == "organizer":
-        page = st.sidebar.selectbox(
-            "🏓 Navigate",
-            ["AutoStack", "DUPRmatch", "Player Profile", "Players Leader Board", "Schedules"]
-        )
+        page_choice = st.sidebar.selectbox("Navigate", list(pages.keys()))
+    else:  # member only sees Players Leader Board
+        page_choice = "Players Leader Board"
+        st.sidebar.success("Players Leader Board")
 
-    # Member sees only Players Leader Board
+    # =========================
+    # DYNAMIC PAGE IMPORT
+    # =========================
+    page_module = importlib.import_module(pages[page_choice])
+    if hasattr(page_module, "app"):
+        page_module.app()  # call the app() function inside each page file
     else:
-        page = "Players Leader Board"
-        st.sidebar.success("🏆 Players Leader Board")
-
-    # =========================
-    # PAGES
-    # =========================
-    if page == "AutoStack":
-        st.title("🔄 AutoStack")
-        st.write("Organizer tool for stacking players.")
-
-    elif page == "DUPRmatch":
-        st.title("🎾 DUPR Match")
-        st.write("Manage DUPR matches here.")
-
-    elif page == "Player Profile":
-        st.title("👤 Player Profile")
-        st.write("Player stats and profile page.")
-
-    elif page == "Players Leader Board":
-        st.title("🏆 Players Leader Board")
-        st.write("Club rankings and statistics.")
-
-    elif page == "Schedules":
-        st.title("📅 Schedules")
-        st.write("Game schedules and bookings.")
+        st.error(f"{page_choice}.py does not have an `app()` function.")
 
 # =========================
 # PAGE ROUTING
