@@ -3,12 +3,34 @@ import streamlit as st
 st.set_page_config(page_title="Pickleball Manager", layout="centered")
 
 # =========================
+# BACKGROUND IMAGE
+# =========================
+page_bg_img = """
+<style>
+[data-testid="stAppViewContainer"] {
+background-image: url("TDphoto.jpg");
+background-size: cover;
+background-position: center;
+background-repeat: no-repeat;
+background-attachment: fixed;
+}
+
+[data-testid="stSidebarNav"] {
+display: none;
+}
+</style>
+"""
+st.markdown(page_bg_img, unsafe_allow_html=True)
+
+
+# =========================
 # USERS (HARDCODED)
 # =========================
 users = {
     "tiradinks1": {"password": "123456", "role": "organizer"},
     "tiradinks2": {"password": "123456", "role": "member"}
 }
+
 
 # =========================
 # SESSION STATE
@@ -18,27 +40,40 @@ if "logged_in" not in st.session_state:
     st.session_state.role = None
     st.session_state.user = None
 
+
 # =========================
 # LOGIN FUNCTION
 # =========================
 def login():
-    st.title("🔐 TiraDinks Login")
+
+    col1, col2, col3 = st.columns([1,2,1])
+
+    with col2:
+        st.image("TDphoto.jpg", width=300)
+
+    st.title("🏠 TiraDinks Official")
+    st.write("Welcome to the TiraDinks Club!")
 
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
 
     if st.button("Sign In"):
+
         if username in users and users[username]["password"] == password:
+
             st.session_state.logged_in = True
             st.session_state.user = username
             st.session_state.role = users[username]["role"]
+
             st.success("Login successful!")
             st.rerun()
+
         else:
             st.error("Invalid username or password")
 
+
 # =========================
-# LOGOUT
+# LOGOUT FUNCTION
 # =========================
 def logout():
     st.session_state.logged_in = False
@@ -46,55 +81,66 @@ def logout():
     st.session_state.user = None
     st.rerun()
 
+
 # =========================
-# MAIN APP
+# MAIN APPLICATION
 # =========================
 def main_app():
 
-    st.title("🏠 TiraDinks Official")
-    st.write(f"Welcome **{st.session_state.user}**!")
+    st.sidebar.title("🏓 TiraDinks Menu")
+    st.sidebar.write(f"Logged in as **{st.session_state.user}**")
 
     st.sidebar.button("Logout", on_click=logout)
 
-    # -------------------------
+    # =========================
     # ORGANIZER MENU
-    # -------------------------
+    # =========================
     if st.session_state.role == "organizer":
+
         page = st.sidebar.selectbox(
-            "Menu",
+            "Navigate",
             [
-                "Player Leaderboard",
-                "Game Manager",
-                "Schedule",
-                "Settings"
+                "AutoStack",
+                "DUPRmatch",
+                "Player Profile",
+                "Players Leader Board",
+                "Schedules"
             ]
         )
 
-    # -------------------------
+    # =========================
     # MEMBER MENU
-    # -------------------------
+    # =========================
     else:
-        page = st.sidebar.selectbox(
-            "Menu",
-            ["Player Leaderboard"]
-        )
+
+        page = "Players Leader Board"
+
+        st.sidebar.success("Players Leader Board")
+
 
     # =========================
     # PAGES
     # =========================
-    if page == "Player Leaderboard":
-        st.header("🏆 Player Leaderboard")
-        st.write("Leaderboard content here")
 
-    if page == "Game Manager":
-        st.header("🎾 Game Manager")
-        st.write("Organizer only content")
+    if page == "AutoStack":
+        st.title("🔄 AutoStack")
+        st.write("Organizer tool for stacking players.")
 
-    if page == "Schedule":
-        st.header("📅 Schedule")
+    elif page == "DUPRmatch":
+        st.title("🎾 DUPR Match")
+        st.write("Manage DUPR matches here.")
 
-    if page == "Settings":
-        st.header("⚙️ Settings")
+    elif page == "Player Profile":
+        st.title("👤 Player Profile")
+        st.write("Player stats and profile page.")
+
+    elif page == "Players Leader Board":
+        st.title("🏆 Players Leader Board")
+        st.write("Club rankings and statistics.")
+
+    elif page == "Schedules":
+        st.title("📅 Schedules")
+        st.write("Game schedules and bookings.")
 
 
 # =========================
