@@ -1,11 +1,11 @@
 import streamlit as st
 
-st.set_page_config(page_title="Pickleball Manager", layout="centered")
+st.set_page_config(page_title="TiraDinks", layout="centered")
 
 # =========================
-# BACKGROUND IMAGE + HIDE DEFAULT SIDEBAR NAV
+# BACKGROUND IMAGE
 # =========================
-page_bg_img = """
+page_bg = """
 <style>
 [data-testid="stAppViewContainer"] {
 background-image: url("TDphoto.jpg");
@@ -14,28 +14,32 @@ background-position: center;
 background-repeat: no-repeat;
 background-attachment: fixed;
 }
-
-/* hide streamlit auto pages */
-[data-testid="stSidebarNav"] {display: none;}
 </style>
 """
-st.markdown(page_bg_img, unsafe_allow_html=True)
+st.markdown(page_bg, unsafe_allow_html=True)
+
 
 # =========================
-# USERS (HARDCODED)
+# HARDCODED USERS
 # =========================
 users = {
     "tiradinks1": {"password": "123456", "role": "organizer"},
     "tiradinks2": {"password": "123456", "role": "member"},
 }
 
+
 # =========================
 # SESSION STATE
 # =========================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+
+if "role" not in st.session_state:
     st.session_state.role = None
+
+if "user" not in st.session_state:
     st.session_state.user = None
+
 
 # =========================
 # LOGIN PAGE
@@ -58,74 +62,33 @@ def login():
         if username in users and users[username]["password"] == password:
 
             st.session_state.logged_in = True
-            st.session_state.user = username
             st.session_state.role = users[username]["role"]
+            st.session_state.user = username
 
+            st.success("Login successful")
             st.rerun()
 
         else:
             st.error("Invalid username or password")
 
-# =========================
-# LOGOUT
-# =========================
-def logout():
-    st.session_state.logged_in = False
-    st.session_state.role = None
-    st.session_state.user = None
-    st.rerun()
 
 # =========================
-# MAIN APP
+# MAIN PAGE AFTER LOGIN
 # =========================
-def main_app():
+def home():
 
-    st.sidebar.title("🏓 TiraDinks Menu")
+    st.sidebar.title("🏓 TiraDinks")
     st.sidebar.write(f"Logged in as **{st.session_state.user}**")
 
     if st.sidebar.button("Logout"):
-        logout()
+        st.session_state.logged_in = False
+        st.session_state.role = None
+        st.session_state.user = None
+        st.rerun()
 
-    # =========================
-    # MEMBER ACCESS
-    # =========================
-    if st.session_state.role == "member":
+    st.title("🏓 Welcome to TiraDinks")
+    st.write("Use the sidebar to navigate the application.")
 
-        st.sidebar.success("Players Leader Board")
-
-        # Force redirect to leaderboard page
-        st.switch_page("pages/Players Leader Board.py")
-
-    # =========================
-    # ORGANIZER ACCESS
-    # =========================
-    if st.session_state.role == "organizer":
-
-        page = st.sidebar.selectbox(
-            "Navigate",
-            [
-                "AutoStack",
-                "DUPRmatch",
-                "Player Profile",
-                "Players Leader Board",
-                "Schedules"
-            ]
-        )
-
-        if page == "AutoStack":
-            st.switch_page("pages/AutoStack.py")
-
-        if page == "DUPRmatch":
-            st.switch_page("pages/DUPRmatch.py")
-
-        if page == "Player Profile":
-            st.switch_page("pages/Player Profile.py")
-
-        if page == "Players Leader Board":
-            st.switch_page("pages/Players Leader Board.py")
-
-        if page == "Schedules":
-            st.switch_page("pages/Schedules.py")
 
 # =========================
 # ROUTING
@@ -133,4 +96,4 @@ def main_app():
 if not st.session_state.logged_in:
     login()
 else:
-    main_app()
+    home()
