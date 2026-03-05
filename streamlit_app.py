@@ -3,7 +3,7 @@ import streamlit as st
 st.set_page_config(page_title="Pickleball Manager", layout="centered")
 
 # =========================
-# BACKGROUND IMAGE
+# BACKGROUND IMAGE + HIDE DEFAULT SIDEBAR NAV
 # =========================
 page_bg_img = """
 <style>
@@ -15,21 +15,19 @@ background-repeat: no-repeat;
 background-attachment: fixed;
 }
 
-/* hide default sidebar pages */
-[data-testid="stSidebarNav"] {display:none;}
+/* hide streamlit auto pages */
+[data-testid="stSidebarNav"] {display: none;}
 </style>
 """
 st.markdown(page_bg_img, unsafe_allow_html=True)
-
 
 # =========================
 # USERS (HARDCODED)
 # =========================
 users = {
     "tiradinks1": {"password": "123456", "role": "organizer"},
-    "tiradinks2": {"password": "123456", "role": "member"}
+    "tiradinks2": {"password": "123456", "role": "member"},
 }
-
 
 # =========================
 # SESSION STATE
@@ -38,7 +36,6 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.role = None
     st.session_state.user = None
-
 
 # =========================
 # LOGIN PAGE
@@ -69,7 +66,6 @@ def login():
         else:
             st.error("Invalid username or password")
 
-
 # =========================
 # LOGOUT
 # =========================
@@ -78,7 +74,6 @@ def logout():
     st.session_state.role = None
     st.session_state.user = None
     st.rerun()
-
 
 # =========================
 # MAIN APP
@@ -92,7 +87,17 @@ def main_app():
         logout()
 
     # =========================
-    # ORGANIZER MENU
+    # MEMBER ACCESS
+    # =========================
+    if st.session_state.role == "member":
+
+        st.sidebar.success("Players Leader Board")
+
+        # Force redirect to leaderboard page
+        st.switch_page("pages/Players Leader Board.py")
+
+    # =========================
+    # ORGANIZER ACCESS
     # =========================
     if st.session_state.role == "organizer":
 
@@ -122,19 +127,8 @@ def main_app():
         if page == "Schedules":
             st.switch_page("pages/Schedules.py")
 
-
-    # =========================
-    # MEMBER MENU
-    # =========================
-    else:
-
-        st.sidebar.success("Players Leader Board")
-
-        st.switch_page("pages/Players Leader Board.py")
-
-
 # =========================
-# PAGE ROUTING
+# ROUTING
 # =========================
 if not st.session_state.logged_in:
     login()
