@@ -27,8 +27,8 @@ st.markdown(page_bg_img, unsafe_allow_html=True)
 # USERS (HARDCODED)
 # =========================
 users = {
-    "tiradinks1": {"password": "123456", "role": "organizer"},
-    "tiradinks2": {"password": "123456", "role": "member"}
+    "tdorg1": {"password": "123456", "role": "organizer"},
+    "tdmem2": {"password": "123456", "role": "member"}
 }
 
 # =========================
