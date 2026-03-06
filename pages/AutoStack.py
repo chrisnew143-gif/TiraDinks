@@ -488,3 +488,37 @@ def app():
                 st.rerun()
 
             st.markdown('</div>', unsafe_allow_html=True)
+
+# Swap Section
+        st.divider()
+        st.markdown("**🔁 Swap Player**")
+
+        flat = teams[0] + teams[1]
+        queue_list = list(st.session_state.queue)
+
+        if flat and queue_list:
+
+            out_player = st.selectbox(
+                "Player OUT",
+                [p[0] for p in flat],
+                key=f"swap_out_{cid}"
+            )
+
+            in_player = st.selectbox(
+                "Player IN",
+                [p[0] for p in queue_list],
+                key=f"swap_in_{cid}"
+            )
+
+            if st.button("🔄 Swap", key=f"swap_btn_{cid}"):
+
+                ci = next(i for i,p in enumerate(flat) if p[0]==out_player)
+                qi = next(i for i,p in enumerate(queue_list) if p[0]==in_player)
+
+                flat[ci], queue_list[qi] = queue_list[qi], flat[ci]
+
+                st.session_state.courts[cid] = [flat[:2], flat[2:]]
+                st.session_state.queue = deque(queue_list)
+
+                  st.rerun()
+
