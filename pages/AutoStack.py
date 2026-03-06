@@ -489,36 +489,54 @@ def app():
 
             st.markdown('</div>', unsafe_allow_html=True)
 
-# Swap Section
-        st.divider()
-        st.markdown("**🔁 Swap Player**")
+            # ================================
+            # SWAP PLAYER
+            # ================================
+            st.divider()
+            st.markdown("**🔁 Swap Player**")
 
-        flat = teams[0] + teams[1]
-        queue_list = list(st.session_state.queue)
+            flat_players = teams[0] + teams[1]
+            queue_list = list(st.session_state.queue)
 
-        if flat and queue_list:
+            if flat_players and queue_list:
 
-            out_player = st.selectbox(
-                "Player OUT",
-                [p[0] for p in flat],
-                key=f"swap_out_{cid}"
-            )
+                out_player = st.selectbox(
+                    "Player OUT",
+                    [p[0] for p in flat_players],
+                    key=f"swap_out_{cid}"
+                )
 
-            in_player = st.selectbox(
-                "Player IN",
-                [p[0] for p in queue_list],
-                key=f"swap_in_{cid}"
-            )
+                in_player = st.selectbox(
+                    "Player IN",
+                    [p[0] for p in queue_list],
+                    key=f"swap_in_{cid}"
+                )
 
-            if st.button("🔄 Swap", key=f"swap_btn_{cid}"):
+                if st.button("🔄 Swap Player", key=f"swap_btn_{cid}"):
 
-                ci = next(i for i,p in enumerate(flat) if p[0]==out_player)
-                qi = next(i for i,p in enumerate(queue_list) if p[0]==in_player)
+                    # Find indexes
+                    court_index = next(
+                        i for i,p in enumerate(flat_players) if p[0] == out_player
+                    )
 
-                flat[ci], queue_list[qi] = queue_list[qi], flat[ci]
+                    queue_index = next(
+                        i for i,p in enumerate(queue_list) if p[0] == in_player
+                    )
 
-                st.session_state.courts[cid] = [flat[:2], flat[2:]]
-                st.session_state.queue = deque(queue_list)
+                    # Swap players
+                    flat_players[court_index], queue_list[queue_index] = (
+                        queue_list[queue_index],
+                        flat_players[court_index]
+                    )
 
-                  st.rerun()
+                    # Update teams
+                    st.session_state.courts[cid] = [
+                        flat_players[:2],
+                        flat_players[2:]
+                    ]
+
+                    # Update queue
+                    st.session_state.queue = deque(queue_list)
+
+                    st.rerun()
 
