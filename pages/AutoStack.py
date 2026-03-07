@@ -112,123 +112,106 @@ def app():
 
         st.session_state.players.pop(name, None)
 
-    # ======================================================
-    # MATCH ENGINE
-    # ======================================================
-    def take_four_safe():
+    def safe_group(players):
+    """Check if a group is safe (no Beginner + Intermediate together)."""
+    skills = {p[1] for p in players}
+    return not ("BEGINNER" in skills and "INTERMEDIATE" in skills)
 
-        q = list(st.session_state.queue)
+def make_teams(players):
+    """Randomly split 4 players into two teams."""
+    random.shuffle(players)
+    return [players[:2], players[2:]]
 
-        if len(q) < 4:
-            return None
-
-        for combo in combinations(range(len(q)), 4):
-
-            group = [q[i] for i in combo]
-
-            if safe_group(group):
-
-                for i in sorted(combo, reverse=True):
-                    del q[i]
-
-                st.session_state.queue = deque(q)
-
-                return group
-
+def take_four_safe():
+    """Take four safe players from the queue for a match."""
+    q = list(st.session_state.queue)
+    if len(q) < 4:
         return None
+    for combo in combinations(range(len(q)), 4):
+        group = [q[i] for i in combo]
+        if safe_group(group):
+            for i in sorted(combo, reverse=True):
+                del q[i]
+            st.session_state.queue = deque(q)
+            return group
+    return None
 
+def start_match(cid):
+    """Start a match on court `cid` if the court is free."""
+    if st.session_state.locked.get(cid):
+        return
+    players = take_four_safe()
+    if not players:
+        return
+    st.session_state.courts[cid] = make_teams(players)
+    st.session_state.locked[cid] = True
+    st.session_state.scores[cid] = [0, 0]
 
-    def start_match(cid):
+def finish_match(cid, supabase=None):
+    """Finish the match on court `cid` and update stats."""
+    teams = st.session_state.courts[cid]
+    if not teams:
+        return
+    scoreA, scoreB = st.session_state.scores[cid]
+    teamA, teamB = teams
 
-        if st.session_state.locked.get(cid):
-            return
+    if scoreA > scoreB:
+        winner = "Team A"
+        winners, losers = teamA, teamB
+    elif scoreB > scoreA:
+        winner = "Team B"
+        winners, losers = teamB, teamA
+    else:
+        winner = "DRAW"
+        winners = losers = []
 
-        players = take_four_safe()
+    for p in teamA + teamB:
+        st.session_state.players[p[0]]["games"] += 1
+    for p in winners:
+        st.session_state.players[p[0]]["wins"] += 1
+    for p in losers:
+        st.session_state.players[p[0]]["losses"] += 1
 
-        if not players:
-            return
-
-        st.session_state.courts[cid] = make_teams(players)
-        st.session_state.locked[cid] = True
-        st.session_state.scores[cid] = [0,0]
-
-
-    def finish_match(cid):
-
-        teams = st.session_state.courts[cid]
-
-        scoreA, scoreB = st.session_state.scores[cid]
-
-        teamA, teamB = teams
-
-        if scoreA > scoreB:
-            winner = "Team A"
-            winners, losers = teamA, teamB
-
-        elif scoreB > scoreA:
-            winner = "Team B"
-            winners, losers = teamB, teamA
-
-        else:
-            winner = "DRAW"
-            winners = losers = []
-
-        for p in teamA + teamB:
-            st.session_state.players[p[0]]["games"] += 1
-
-        for p in winners:
-            st.session_state.players[p[0]]["wins"] += 1
-
-        for p in losers:
-            st.session_state.players[p[0]]["losses"] += 1
-
-        # Supabase update
+    # Supabase update
+    if supabase:
         try:
-
             for p in teamA + teamB:
-
                 name = p[0]
                 stats = st.session_state.players[name]
-
                 supabase.table("players").update({
                     "games": stats["games"],
                     "wins": stats["wins"]
                 }).eq("name", name).execute()
-
         except:
             pass
 
-        st.session_state.history.append({
-            "Court": cid,
-            "Team A": " & ".join(p[0] for p in teamA),
-            "Team B": " & ".join(p[0] for p in teamB),
-            "Score A": scoreA,
-            "Score B": scoreB,
-            "Winner": winner
-        })
+    # Update history
+    st.session_state.history.append({
+        "Court": cid,
+        "Team A": " & ".join(p[0] for p in teamA),
+        "Team B": " & ".join(p[0] for p in teamB),
+        "Score A": scoreA,
+        "Score B": scoreB,
+        "Winner": winner
+    })
 
-        players = teamA + teamB
+    # Return players to queue
+    players = teamA + teamB
+    random.shuffle(players)
+    st.session_state.queue.extend(players)
 
-        random.shuffle(players)
+    # Reset court
+    st.session_state.courts[cid] = None
+    st.session_state.locked[cid] = False
+    st.session_state.scores[cid] = [0, 0]
 
-        st.session_state.queue.extend(players)
-
-        st.session_state.courts[cid] = None
-        st.session_state.locked[cid] = False
-        st.session_state.scores[cid] = [0,0]
-
-
-    def auto_fill():
-
-        if not st.session_state.started:
-            return
-
-        for cid in st.session_state.courts:
-
-            if st.session_state.courts[cid] is None:
-
-                start_match(cid)
-
+def auto_fill():
+    """Automatically fill all empty courts with safe players."""
+    if not st.session_state.started:
+        return
+    for cid in st.session_state.courts:
+        if st.session_state.courts[cid] is None:
+            start_match(cid)
     # ======================================================
 # CSV EXPORT FUNCTIONS
 # ======================================================
