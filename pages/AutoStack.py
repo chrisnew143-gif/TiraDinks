@@ -10,11 +10,13 @@ from supabase_client import get_supabase
 supabase = get_supabase()
 
 def app():
-    
-# ======================================================
-# PAGE CONFIG
-# ======================================================
-st.set_page_config(page_title="Pickleball Auto Stack TiraDinks Official", page_icon="🎾", layout="wide")
+
+    # ======================================================
+    # PAGE CONFIG
+    # ======================================================
+    st.set_page_config(page_title="Pickleball Auto Stack TiraDinks Official",
+                       page_icon="🎾",
+                       layout="wide")
 
 st.markdown("""
 <style>
