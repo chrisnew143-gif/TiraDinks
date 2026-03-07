@@ -9,43 +9,46 @@ from supabase_client import get_supabase
 
 supabase = get_supabase()
 
+
 def app():
 
     # ======================================================
     # PAGE CONFIG
     # ======================================================
-    st.set_page_config(page_title="Pickleball Auto Stack TiraDinks Official",
-                       page_icon="🎾",
-                       layout="wide")
+    st.set_page_config(
+        page_title="Pickleball Auto Stack TiraDinks Official",
+        page_icon="🎾",
+        layout="wide"
+    )
 
-st.markdown("""
-<style>
-footer {visibility:hidden;}
-a[href*="github.com/streamlit"]{display:none!important;}
+    st.markdown("""
+    <style>
+    footer {visibility:hidden;}
+    a[href*="github.com/streamlit"]{display:none!important;}
 
-.court-card{
-    padding:14px;
-    border-radius:12px;
-    background:#f4f6fa;
-    margin-bottom:12px;
-}
-.waiting-box{
-    background:#fff3cd;
-    padding:10px;
-    border-radius:10px;
-}
-</style>
-""", unsafe_allow_html=True)
+    .court-card{
+        padding:14px;
+        border-radius:12px;
+        background:#f4f6fa;
+        margin-bottom:12px;
+    }
+    .waiting-box{
+        background:#fff3cd;
+        padding:10px;
+        border-radius:10px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-# =========================
-# HEADER PHOTO
-# =========================
-col1, col2, col3 = st.columns([1,2,1])
-with col2:
-    st.image("TDphoto.jpg", width=300)
+    # =========================
+    # HEADER PHOTO
+    # =========================
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        st.image("TDphoto.jpg", width=300)
 
-st.title("🎾 Pickleball Auto Stack TiraDinks Official")
-st.caption("LET'S PLAY!")
+    st.title("🎾 Pickleball Auto Stack TiraDinks Official")
+    st.caption("LET'S PLAY!")
 
 # ======================================================
 # HELPERS
@@ -442,3 +445,6 @@ for i, cid in enumerate(st.session_state.courts):
                 st.session_state.queue = deque(queue_list)
 
                 st.rerun()
+
+if __name__ == "__main__":
+    app()
