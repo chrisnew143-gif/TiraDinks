@@ -9,7 +9,8 @@ from supabase_client import get_supabase
 
 def app():
 
-supabase = get_supabase()
+    supabase = get_supabase()
+
 
 # ======================================================
 # PAGE CONFIG
