@@ -266,65 +266,43 @@ def players_csv():
 
     return pd.DataFrame(rows).to_csv(index=False).encode()
 
-    # ======================================================
-    # PROFILE SAVE / LOAD
-    # ======================================================
-    SAVE_DIR = "profiles"
+   # ======================================================
+# PROFILE SAVE / LOAD
+# ======================================================
+SAVE_DIR = "profiles"
+os.makedirs(SAVE_DIR, exist_ok=True)
 
-    os.makedirs(SAVE_DIR, exist_ok=True)
+def save_profile(name):
+    data = {
+        "queue": list(st.session_state.queue),
+        "courts": st.session_state.courts,
+        "locked": st.session_state.locked,
+        "scores": st.session_state.scores,
+        "history": st.session_state.history,
+        "started": st.session_state.started,
+        "court_count": st.session_state.court_count,
+        "players": st.session_state.players
+    }
+    with open(os.path.join(SAVE_DIR, f"{name}.json"), "w") as f:
+        json.dump(data, f)
+    st.success("Profile saved!")
 
-    def save_profile(name):
+def load_profile(name):
+    with open(os.path.join(SAVE_DIR, f"{name}.json"), "r") as f:
+        data = json.load(f)
+    st.session_state.queue = deque(data["queue"])
+    st.session_state.courts = {int(k): v for k,v in data["courts"].items()}
+    st.session_state.locked = {int(k): v for k,v in data["locked"].items()}
+    st.session_state.scores = {int(k): v for k,v in data["scores"].items()}
+    st.session_state.history = data["history"]
+    st.session_state.started = data["started"]
+    st.session_state.court_count = data["court_count"]
+    st.session_state.players = data["players"]
 
-        data = {
-
-            "queue": list(st.session_state.queue),
-            "courts": st.session_state.courts,
-            "locked": st.session_state.locked,
-            "scores": st.session_state.scores,
-            "history": st.session_state.history,
-            "started": st.session_state.started,
-            "court_count": st.session_state.court_count,
-            "players": st.session_state.players
-        }
-
-        with open(os.path.join(SAVE_DIR, f"{name}.json"), "w") as f:
-
-            json.dump(data, f)
-
-        st.success("Profile saved!")
-
-
-    def load_profile(name):
-
-        with open(os.path.join(SAVE_DIR, f"{name}.json"), "r") as f:
-
-            data = json.load(f)
-
-        st.session_state.queue = deque(data["queue"])
-
-        st.session_state.courts = {int(k): v for k,v in data["courts"].items()}
-
-        st.session_state.locked = {int(k): v for k,v in data["locked"].items()}
-
-        st.session_state.scores = {int(k): v for k,v in data["scores"].items()}
-
-        st.session_state.history = data["history"]
-
-        st.session_state.started = data["started"]
-
-        st.session_state.court_count = data["court_count"]
-
-        st.session_state.players = data["players"]
-
-
-    def delete_profile(name):
-
-        os.remove(os.path.join(SAVE_DIR, f"{name}.json"))
-
-        st.success("Profile deleted!")
-
-        st.rerun()
-
+def delete_profile(name):
+    os.remove(os.path.join(SAVE_DIR, f"{name}.json"))
+    st.success("Profile deleted!")
+    st.rerun()
    # ======================================================
 # SAFE SESSION STATE INITIALIZATION
 # ======================================================
