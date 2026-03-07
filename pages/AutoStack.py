@@ -318,119 +318,141 @@ def app():
         st.rerun()
 
     # ======================================================
-    # SIDEBAR
+# SIDEBAR
+# ======================================================
+with st.sidebar:
+
+    st.header("⚙ Setup")
+
+    st.session_state.court_count = st.selectbox(
+        "Courts",
+        [1,2,3,4,5,6],
+        index=st.session_state.court_count-1
+    )
+
+    # Load players from Supabase
+    try:
+        registered = supabase.table("players").select("*").execute().data
+    except:
+        registered = []
+
+    names = [p["name"] for p in registered]
+
+    with st.form("add_form", clear_on_submit=True):
+
+        selected = st.selectbox("Select Player", [""] + names)
+
+        if st.form_submit_button("Add Player") and selected:
+
+            if selected not in st.session_state.players:
+
+                data = next(p for p in registered if p["name"] == selected)
+
+                st.session_state.queue.appendleft(
+                    (selected, data["skill"].upper(), data["dupr"])
+                )
+
+                st.session_state.players[selected] = {
+                    "dupr": data["dupr"],
+                    "games":0,
+                    "wins":0,
+                    "losses":0
+                }
+
+    if st.session_state.players:
+
+        st.divider()
+
+        remove = st.selectbox(
+            "❌ Remove Player",
+            list(st.session_state.players.keys())
+        )
+
+        if st.button("Delete Player"):
+
+            delete_player(remove)
+            st.rerun()
+
+    st.divider()
+
+    col1, col2 = st.columns(2)
+
+    if col1.button("🚀 Start"):
+
+        st.session_state.started = True
+
+        st.session_state.courts = {
+            i:None for i in range(1, st.session_state.court_count+1)
+        }
+
+        st.session_state.locked = {
+            i:False for i in st.session_state.courts
+        }
+
+        st.session_state.scores = {
+            i:[0,0] for i in st.session_state.courts
+        }
+
+        st.rerun()
+
+    if col2.button("🔄 Reset"):
+
+        st.session_state.clear()
+        st.rerun()
+
     # ======================================================
-    with st.sidebar:
+    # CSV EXPORT SECTION
+    # ======================================================
+    st.divider()
+    st.subheader("📥 Export Data")
 
-        st.header("⚙ Setup")
+    st.download_button(
+        label="⬇ Download Match History CSV",
+        data=matches_csv(),
+        file_name="tiradinks_matches.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
 
-        st.session_state.court_count = st.selectbox(
-            "Courts",
-            [1,2,3,4,5,6],
-            index=st.session_state.court_count-1
-        )
+    st.download_button(
+        label="⬇ Download Player Stats CSV",
+        data=players_csv(),
+        file_name="tiradinks_players.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
 
-        # Load players from Supabase
-        try:
-            registered = supabase.table("players").select("*").execute().data
-        except:
-            registered = []
+    # ======================================================
+    # PROFILE SAVE / LOAD
+    # ======================================================
+    st.divider()
 
-        names = [p["name"] for p in registered]
+    profile_name = st.text_input("Profile Name")
 
-        with st.form("add_form", clear_on_submit=True):
+    col1, col2 = st.columns(2)
 
-            selected = st.selectbox("Select Player", [""] + names)
+    if col1.button("Save Profile") and profile_name:
 
-            if st.form_submit_button("Add Player") and selected:
+        save_profile(profile_name)
 
-                if selected not in st.session_state.players:
+    profiles = [
+        f[:-5] for f in os.listdir(SAVE_DIR)
+        if f.endswith(".json")
+    ]
 
-                    data = next(p for p in registered if p["name"] == selected)
+    selected_profile = st.selectbox(
+        "Select Profile",
+        [""] + profiles
+    )
 
-                    st.session_state.queue.appendleft(
-                        (selected, data["skill"].upper(), data["dupr"])
-                    )
+    if col2.button("Load Profile") and selected_profile:
 
-                    st.session_state.players[selected] = {
-                        "dupr": data["dupr"],
-                        "games":0,
-                        "wins":0,
-                        "losses":0
-                    }
+        load_profile(selected_profile)
+        st.rerun()
 
-        if st.session_state.players:
+    if st.button("Delete Profile") and selected_profile:
 
-            st.divider()
-
-            remove = st.selectbox(
-                "❌ Remove Player",
-                list(st.session_state.players.keys())
-            )
-
-            if st.button("Delete Player"):
-
-                delete_player(remove)
-
-                st.rerun()
-
-        st.divider()
-
-        col1, col2 = st.columns(2)
-
-        if col1.button("🚀 Start"):
-
-            st.session_state.started = True
-
-            st.session_state.courts = {
-                i:None for i in range(1, st.session_state.court_count+1)
-            }
-
-            st.session_state.locked = {
-                i:False for i in st.session_state.courts
-            }
-
-            st.session_state.scores = {
-                i:[0,0] for i in st.session_state.courts
-            }
-
-            st.rerun()
-
-        if col2.button("🔄 Reset"):
-
-            st.session_state.clear()
-
-            st.rerun()
-
-        st.divider()
-
-        profile_name = st.text_input("Profile Name")
-
-        col1, col2 = st.columns(2)
-
-        if col1.button("Save Profile") and profile_name:
-
-            save_profile(profile_name)
-
-        profiles = [
-            f[:-5] for f in os.listdir(SAVE_DIR)
-            if f.endswith(".json")
-        ]
-
-        selected_profile = st.selectbox(
-            "Select Profile",
-            [""] + profiles
-        )
-
-        if col2.button("Load Profile") and selected_profile:
-
-            load_profile(selected_profile)
-
-            st.rerun()
-
-        if st.button("Delete Profile") and selected_profile:
-
-            delete_profile(selected_profile)
+        delete_profile(selected_profile)
 
     # ======================================================
     # MAIN
