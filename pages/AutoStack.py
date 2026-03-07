@@ -194,6 +194,97 @@ def app():
                 start_match(cid)
 
     # ======================================================
+# SIDEBAR
+# ======================================================
+with st.sidebar:
+
+    st.header("⚙ Setup")
+
+    st.session_state.court_count = st.selectbox(
+    "Courts",
+    [1, 2, 3, 4, 5, 6],
+    index=st.session_state.court_count - 1
+)
+
+    # Add Player from Supabase
+    try:
+        registered = supabase.table("players").select("*").execute().data
+    except:
+        registered = []
+
+    names = [p["name"] for p in registered]
+
+    with st.form("add_form", clear_on_submit=True):
+        selected = st.selectbox("Select Player", [""] + names)
+        if st.form_submit_button("Add Player") and selected:
+            if selected not in st.session_state.players:
+                data = next(p for p in registered if p["name"] == selected)
+                st.session_state.queue.appendleft((selected, data["skill"].upper(), data["dupr"]))
+                st.session_state.players[selected] = {
+                    "dupr": data["dupr"],
+                    "games":0,
+                    "wins":0,
+                    "losses":0
+                }
+
+    # Delete Player
+    if st.session_state.players:
+        st.divider()
+        remove = st.selectbox("❌ Remove Player", list(st.session_state.players.keys()))
+        if st.button("Delete Player"):
+            delete_player(remove)
+            st.rerun()
+
+    st.divider()
+
+    col1, col2 = st.columns(2)
+    if col1.button("🚀 Start"):
+        st.session_state.started = True
+        st.session_state.courts = {i:None for i in range(1, st.session_state.court_count+1)}
+        st.session_state.locked = {i:False for i in st.session_state.courts}
+        st.session_state.scores = {i:[0,0] for i in st.session_state.courts}
+        st.rerun()
+
+    if col2.button("🔄 Reset"):
+        st.session_state.clear()
+        st.rerun()
+
+    st.divider()
+
+    # Profiles
+    profile_name = st.text_input("Profile Name")
+    col1, col2 = st.columns(2)
+
+    if col1.button("Save Profile") and profile_name:
+        save_profile(profile_name)
+
+    profiles = [f[:-5] for f in os.listdir(SAVE_DIR) if f.endswith(".json")]
+    selected_profile = st.selectbox("Select Profile", [""] + profiles)
+
+    if col2.button("Load Profile") and selected_profile:
+        load_profile(selected_profile)
+        st.rerun()
+
+    if st.button("Delete Profile") and selected_profile:
+        delete_profile(selected_profile)
+
+    st.divider()
+    st.subheader("📥 Export Data")
+
+    st.download_button(
+        "⬇ Download Match History CSV",
+        data=matches_csv(),
+        file_name="pickleball_matches.csv",
+        mime="text/csv"
+    )
+
+    st.download_button(
+        "⬇ Download Player Stats CSV",
+        data=players_csv(),
+        file_name="pickleball_players.csv",
+        mime="text/csv"
+
+    # ======================================================
     # MAIN
     # ======================================================
     auto_fill()
