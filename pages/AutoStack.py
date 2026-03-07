@@ -10,8 +10,7 @@ from supabase_client import get_supabase
 supabase = get_supabase()
 
 def app():
-
-
+    st.title("Auto Stack")
 # ======================================================
 # PAGE CONFIG
 # ======================================================
