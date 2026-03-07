@@ -230,6 +230,26 @@ def app():
                 start_match(cid)
 
     # ======================================================
+    # CSV EXPORTS
+    # ======================================================
+    def matches_csv():
+    if not st.session_state.history:
+        return b""
+    return pd.DataFrame(st.session_state.history).to_csv(index=False).encode()
+
+    def players_csv():
+    rows = []
+    for name, data in st.session_state.players.items():
+        rows.append({
+            "Player Name": name,
+            "DUPR ID": data["dupr"],
+            "Games Played": data["games"],
+            "Wins": data["wins"],
+            "Losses": data["losses"]
+        })
+    return pd.DataFrame(rows).to_csv(index=False).encode()
+
+    # ======================================================
     # PROFILE SAVE / LOAD
     # ======================================================
     SAVE_DIR = "profiles"
