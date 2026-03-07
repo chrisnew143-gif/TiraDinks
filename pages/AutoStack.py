@@ -7,19 +7,18 @@ import json
 import os
 from supabase_client import get_supabase
 
+# ======================================================
+# PAGE CONFIG (must be first Streamlit command)
+# ======================================================
+st.set_page_config(
+    page_title="Pickleball Auto Stack TiraDinks Official",
+    page_icon="🎾",
+    layout="wide"
+)
+
 supabase = get_supabase()
 
-
 def app():
-
-    # ======================================================
-    # PAGE CONFIG
-    # ======================================================
-    st.set_page_config(
-        page_title="Pickleball Auto Stack TiraDinks Official",
-        page_icon="🎾",
-        layout="wide"
-    )
 
     st.markdown("""
     <style>
@@ -50,11 +49,17 @@ def app():
     st.title("🎾 Pickleball Auto Stack TiraDinks Official")
     st.caption("LET'S PLAY!")
 
+
 # ======================================================
 # HELPERS
 # ======================================================
 def icon(skill):
-    return {"BEGINNER":"🟢","NOVICE":"🟡","INTERMEDIATE":"🔴"}[skill]
+    icons = {
+        "BEGINNER": "🟢",
+        "NOVICE": "🟡",
+        "INTERMEDIATE": "🔴"
+    }
+    return icons.get(skill, "⚪")
 
 def superscript_number(n):
     sup_map = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
@@ -170,10 +175,11 @@ def finish_match(cid):
             stats = st.session_state.players[name]
             supabase.table("players").update({
                 "games": stats["games"],
-                "wins": stats["wins"]
+                "wins": stats["wins"],
+                "losses": stats["losses"]
             }).eq("name", name).execute()
-    except:
-        pass
+    except Exception as e:
+        st.warning(f"Supabase update failed: {e}")
 
     st.session_state.history.append({
         "Court": cid,
@@ -266,12 +272,11 @@ with st.sidebar:
     st.header("⚙ Setup")
 
     st.session_state.court_count = st.selectbox(
-    "Courts",
-    [1, 2, 3, 4, 5, 6],
-    index=st.session_state.court_count - 1
-)
+        "Courts",
+        [1,2,3,4,5,6],
+        index=st.session_state.court_count - 1
+    )
 
-    # Add Player from Supabase
     try:
         registered = supabase.table("players").select("*").execute().data
     except:
@@ -292,7 +297,6 @@ with st.sidebar:
                     "losses":0
                 }
 
-    # Delete Player
     if st.session_state.players:
         st.divider()
         remove = st.selectbox("❌ Remove Player", list(st.session_state.players.keys()))
@@ -303,6 +307,7 @@ with st.sidebar:
     st.divider()
 
     col1, col2 = st.columns(2)
+
     if col1.button("🚀 Start"):
         st.session_state.started = True
         st.session_state.courts = {i:None for i in range(1, st.session_state.court_count+1)}
@@ -316,8 +321,8 @@ with st.sidebar:
 
     st.divider()
 
-    # Profiles
     profile_name = st.text_input("Profile Name")
+
     col1, col2 = st.columns(2)
 
     if col1.button("Save Profile") and profile_name:
@@ -356,6 +361,7 @@ with st.sidebar:
 auto_fill()
 
 st.subheader("⏳ Waiting Queue")
+
 if st.session_state.queue:
     st.markdown(
         f'<div class="waiting-box">{", ".join(fmt(p) for p in st.session_state.queue)}</div>',
@@ -413,7 +419,6 @@ for i, cid in enumerate(st.session_state.courts):
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Swap Section
         st.divider()
         st.markdown("**🔁 Swap Player**")
 
