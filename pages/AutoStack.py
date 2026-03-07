@@ -317,9 +317,31 @@ def app():
 
         st.rerun()
 
-    # ======================================================
-# SAFE SESSION INITIALIZATION
+   # ======================================================
+# SAFE SESSION STATE INITIALIZATION
 # ======================================================
+if "players" not in st.session_state:
+    st.session_state.players = {}
+
+if "queue" not in st.session_state:
+    from collections import deque
+    st.session_state.queue = deque()
+
+if "courts" not in st.session_state:
+    st.session_state.courts = {}
+
+if "locked" not in st.session_state:
+    st.session_state.locked = {}
+
+if "scores" not in st.session_state:
+    st.session_state.scores = {}
+
+if "history" not in st.session_state:
+    st.session_state.history = []
+
+if "started" not in st.session_state:
+    st.session_state.started = False
+
 if "court_count" not in st.session_state:
     st.session_state.court_count = 2
 
