@@ -318,6 +318,13 @@ def app():
         st.rerun()
 
     # ======================================================
+# SAFE SESSION INITIALIZATION
+# ======================================================
+if "court_count" not in st.session_state:
+    st.session_state.court_count = 2
+
+
+# ======================================================
 # SIDEBAR
 # ======================================================
 with st.sidebar:
@@ -327,7 +334,7 @@ with st.sidebar:
     st.session_state.court_count = st.selectbox(
         "Courts",
         [1,2,3,4,5,6],
-        index=st.session_state.court_count-1
+        index=st.session_state.court_count - 1
     )
 
     # Load players from Supabase
@@ -354,9 +361,9 @@ with st.sidebar:
 
                 st.session_state.players[selected] = {
                     "dupr": data["dupr"],
-                    "games":0,
-                    "wins":0,
-                    "losses":0
+                    "games": 0,
+                    "wins": 0,
+                    "losses": 0
                 }
 
     if st.session_state.players:
@@ -382,15 +389,15 @@ with st.sidebar:
         st.session_state.started = True
 
         st.session_state.courts = {
-            i:None for i in range(1, st.session_state.court_count+1)
+            i: None for i in range(1, st.session_state.court_count + 1)
         }
 
         st.session_state.locked = {
-            i:False for i in st.session_state.courts
+            i: False for i in st.session_state.courts
         }
 
         st.session_state.scores = {
-            i:[0,0] for i in st.session_state.courts
+            i: [0, 0] for i in st.session_state.courts
         }
 
         st.rerun()
@@ -432,7 +439,6 @@ with st.sidebar:
     col1, col2 = st.columns(2)
 
     if col1.button("Save Profile") and profile_name:
-
         save_profile(profile_name)
 
     profiles = [
@@ -446,12 +452,10 @@ with st.sidebar:
     )
 
     if col2.button("Load Profile") and selected_profile:
-
         load_profile(selected_profile)
         st.rerun()
 
     if st.button("Delete Profile") and selected_profile:
-
         delete_profile(selected_profile)
 
     # ======================================================
