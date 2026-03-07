@@ -2,135 +2,133 @@ import streamlit as st
 from supabase_client import get_supabase
 import pandas as pd
 
+
 def app():
 
-```
-# ==========================
-# INIT
-# ==========================
-supabase = get_supabase()
+    # ==========================
+    # INIT
+    # ==========================
+    supabase = get_supabase()
 
-st.title("🎾 Player Profiles - TiraDinks Official")
+    st.title("🎾 Player Profiles - TiraDinks Official")
 
-# =====================================================
-# LOAD PLAYERS (used for display + delete dropdown)
-# =====================================================
-try:
-    response = supabase.table("players").select("*").order("created_at").execute()
-    players = response.data or []
-except Exception as e:
-    st.error(f"Error loading players: {e}")
-    players = []
+    # =====================================================
+    # LOAD PLAYERS
+    # =====================================================
+    try:
+        response = supabase.table("players").select("*").order("created_at").execute()
+        players = response.data or []
+    except Exception as e:
+        st.error(f"Error loading players: {e}")
+        players = []
 
-# =====================================================
-# SIDEBAR - ADD PLAYER
-# =====================================================
-st.sidebar.header("➕ Add Player")
+    # =====================================================
+    # SIDEBAR - ADD PLAYER
+    # =====================================================
+    st.sidebar.header("➕ Add Player")
 
-with st.sidebar.form("add_player_form", clear_on_submit=True):
+    with st.sidebar.form("add_player_form", clear_on_submit=True):
 
-    name = st.text_input("Player Name")
-    dupr = st.text_input("DUPR ID")  # Alphanumeric
+        name = st.text_input("Player Name")
+        dupr = st.text_input("DUPR ID")
 
-    skill = st.radio(
-        "Skill",
-        ["Beginner", "Novice", "Intermediate"],
-        horizontal=False
-    )
+        skill = st.radio(
+            "Skill",
+            ["Beginner", "Novice", "Intermediate"]
+        )
 
-    submitted = st.form_submit_button("Add Player")
+        submitted = st.form_submit_button("Add Player")
 
-    if submitted:
+        if submitted:
 
-        if not name.strip() or not dupr.strip():
-            st.sidebar.error("Please provide both Name and DUPR ID")
+            if not name.strip() or not dupr.strip():
+                st.sidebar.error("Please provide both Name and DUPR ID")
 
-        else:
+            else:
+                try:
+                    response = supabase.table("players").insert({
+                        "name": name.strip(),
+                        "dupr": dupr.strip(),
+                        "skill": skill
+                    }).execute()
+
+                    if response.data:
+                        st.sidebar.success(f"✅ {name} added!")
+                        st.rerun()
+                    else:
+                        st.sidebar.error("Insert failed. Player may already exist.")
+
+                except Exception as e:
+                    st.sidebar.error(f"Error adding player: {e}")
+
+    # =====================================================
+    # SIDEBAR - DELETE PLAYER
+    # =====================================================
+    st.sidebar.header("🗑 Delete Player")
+
+    if players:
+
+        player_names = [p["name"] for p in players]
+
+        selected_name = st.sidebar.selectbox(
+            "Select Player to Delete",
+            player_names
+        )
+
+        if st.sidebar.button("Delete Selected Player"):
+
             try:
-                response = supabase.table("players").insert({
-                    "name": name.strip(),
-                    "dupr": dupr.strip(),
-                    "skill": skill
-                }).execute()
-
-                if response.data:
-                    st.sidebar.success(f"✅ {name} added!")
-                    st.rerun()
-                else:
-                    st.sidebar.error("Insert failed. Player may already exist.")
-
-            except Exception as e:
-                st.sidebar.error(f"Error adding player: {e}")
-
-# =====================================================
-# SIDEBAR - DELETE PLAYER
-# =====================================================
-st.sidebar.header("🗑 Delete Player")
-
-if players:
-
-    player_names = [p["name"] for p in players]
-
-    selected_name = st.sidebar.selectbox(
-        "Select Player to Delete",
-        player_names
-    )
-
-    if st.sidebar.button("Delete Selected Player"):
-
-        try:
-            selected_player = next(
-                (p for p in players if p["name"] == selected_name),
-                None
-            )
-
-            if selected_player:
-
-                delete_response = (
-                    supabase
-                    .table("players")
-                    .delete()
-                    .eq("id", selected_player["id"])
-                    .execute()
+                selected_player = next(
+                    (p for p in players if p["name"] == selected_name),
+                    None
                 )
 
-                if delete_response.data is not None:
-                    st.sidebar.success(f"Deleted {selected_name}")
-                    st.rerun()
-                else:
-                    st.sidebar.error("Delete failed.")
+                if selected_player:
 
-        except Exception as e:
-            st.sidebar.error(f"Error deleting player: {e}")
+                    delete_response = (
+                        supabase
+                        .table("players")
+                        .delete()
+                        .eq("id", selected_player["id"])
+                        .execute()
+                    )
 
-else:
-    st.sidebar.info("No players to delete.")
+                    if delete_response.data is not None:
+                        st.sidebar.success(f"Deleted {selected_name}")
+                        st.rerun()
+                    else:
+                        st.sidebar.error("Delete failed.")
 
-# =====================================================
-# MAIN PAGE - TABLE DISPLAY
-# =====================================================
-st.subheader("📋 Registered Players")
+            except Exception as e:
+                st.sidebar.error(f"Error deleting player: {e}")
 
-if not players:
-    st.info("No players registered yet.")
+    else:
+        st.sidebar.info("No players to delete.")
 
-else:
+    # =====================================================
+    # MAIN PAGE - TABLE DISPLAY
+    # =====================================================
+    st.subheader("📋 Registered Players")
 
-    df = pd.DataFrame(players)
+    if not players:
+        st.info("No players registered yet.")
 
-    df["skill"] = df.get("skill", "").str.upper()
+    else:
 
-    df_display = df[["name", "dupr", "skill"]].rename(columns={
-        "name": "Player",
-        "dupr": "DUPR ID",
-        "skill": "Category"
-    })
+        df = pd.DataFrame(players)
 
-    df_display = df_display.sort_values(by="Player")
+        df["skill"] = df.get("skill", "").str.upper()
 
-    st.dataframe(
-        df_display,
-        use_container_width=True,
-        hide_index=True
-    )
-```
+        df_display = df[["name", "dupr", "skill"]].rename(columns={
+            "name": "Player",
+            "dupr": "DUPR ID",
+            "skill": "Category"
+        })
+
+        df_display = df_display.sort_values(by="Player")
+
+        st.dataframe(
+            df_display,
+            use_container_width=True,
+            hide_index=True
+        )
