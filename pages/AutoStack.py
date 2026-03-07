@@ -445,6 +445,3 @@ for i, cid in enumerate(st.session_state.courts):
                 st.session_state.queue = deque(queue_list)
 
                 st.rerun()
-
-if __name__ == "__main__":
-    app()
