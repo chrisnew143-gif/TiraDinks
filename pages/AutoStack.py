@@ -403,6 +403,21 @@ def app():
 
             delete_profile(selected_profile)
 
+        # ======================================================
+        # DOWNLOAD MATCHES CSV
+        # ======================================================
+        if st.session_state.history:
+            df_history = pd.DataFrame(st.session_state.history)
+
+            st.download_button(
+                label="📥 Download Matches CSV",
+                data=df_history.to_csv(index=False).encode('utf-8'),
+                file_name="matches_history.csv",
+                mime="text/csv"
+            )
+        else:
+            st.info("No match history yet to download.")
+
     # ======================================================
     # MAIN
     # ======================================================
